@@ -50,6 +50,54 @@ final class Position
     }
 }
 
+// Part 1
+$position = new AimedPosition();
+foreach ($commands as $command) {
+    $position = $position->withCommand(Command::create($command));
+}
+
+echo 'What do you get if you multiply your final horizontal position by your final depth?' . PHP_EOL;
+echo $position->getDepth() * $position->getHorizontal() . PHP_EOL;
+
+final class AimedPosition
+{
+    private int $horizontal = 0;
+    private int $depth = 0;
+    private int $aim = 0;
+
+    public function withCommand(Command $command): self
+    {
+        $clone = clone $this;
+
+        switch($command->getDirection()) {
+            case 'forward':
+                $clone->horizontal += $command->getUnits();
+                $clone->depth += ($clone->aim * $command->getUnits());
+                break;
+            case 'down':
+                $clone->aim += $command->getUnits();
+                break;
+            case 'up':
+                $clone->aim -= $command->getUnits();
+                break;
+            default:
+                throw new RuntimeException("Unknown direction {$command->getDirection()} found");
+        }
+
+        return $clone;
+    }
+
+    public function getHorizontal(): int
+    {
+        return $this->horizontal;
+    }
+
+    public function getDepth(): int
+    {
+        return $this->depth;
+    }
+}
+
 final class Command
 {
     private string $direction;
