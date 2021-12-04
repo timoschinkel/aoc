@@ -26,6 +26,38 @@ foreach ($draws as $draw) {
     }
 }
 
+// Part 2
+
+/** @var Board[] $contenders */
+$contenders = [];
+/** @var Board[] $winners */
+$winners = [];
+
+for ($row = 2; $row < count($input); $row += 6) {
+    $contenders[] = Board::create(array_slice($input, $row, 5));
+}
+
+foreach ($draws as $draw) {
+    $contenders = array_map(fn(Board $board): Board => $board->withDraw($draw), $contenders);
+
+    foreach (array_keys($contenders) as $index) {
+        $board = $contenders[$index];
+
+        if ($board->isWinner()) {
+            // move board to `winners` and remove from `contenders`
+            $winners[] = $board;
+            unset($contenders[$index]);
+
+            if (count($contenders) === 0) {
+                $lastWinner = end($winners);
+
+                echo "Once it wins, what would its final score be?" . PHP_EOL;
+                echo ($lastWinner->getScore() * $draw) . PHP_EOL;
+            }
+        }
+    }
+}
+
 final class Board
 {
     private const DIMENSION = 5;
@@ -114,9 +146,9 @@ final class Board
         for($rowNumber = 0; $rowNumber < self::DIMENSION; $rowNumber++) {
             $row = $this->getRow($rowNumber);
             $rows[] = join(' ', array_map(
-                fn(int $item): string =>
+                    fn(int $item): string =>
                     str_pad(in_array($item, $this->draws) ? "[${item}]" : " ${item} ", 4, ' ', STR_PAD_LEFT),
-                $row)
+                    $row)
             );
         }
 
