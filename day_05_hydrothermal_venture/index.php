@@ -4,7 +4,15 @@ declare(strict_types=1);
 
 $input = explode(PHP_EOL, trim(file_get_contents(__DIR__ . '/input.txt')));
 
-$lines = array_map(fn(string $line): Line => Line::create($line), $input);
+// Part 1:
+$lines = array_map(fn(string $line): Line => Line::create($line, false), $input);
+$map = new Map(...$lines);
+
+echo 'At how many points do at least two lines overlap?' . PHP_EOL;
+echo $map->getNumberOfDangerousPoints() . PHP_EOL;
+
+// Part 2:
+$lines = array_map(fn(string $line): Line => Line::create($line, true), $input);
 $map = new Map(...$lines);
 
 echo 'At how many points do at least two lines overlap?' . PHP_EOL;
@@ -66,17 +74,19 @@ final class Line
 {
     private Point $start;
     private Point $end;
+    private bool $allowDiagonally;
 
-    public function __construct(Point $start, Point $end)
+    public function __construct(Point $start, Point $end, bool $allowDiagonally = false)
     {
         $this->start = $start;
         $this->end = $end;
+        $this->allowDiagonally = $allowDiagonally;
     }
 
-    public static function create(string $input): self
+    public static function create(string $input, bool $allowDiagonally = false): self
     {
         preg_match('%^(?P<x1>\d+),(?P<y1>\d+)\s*->\s*(?P<x2>\d+),(?P<y2>\d+)$%si', $input, $matches);
-        return new self(new Point((int)$matches['x1'], (int)$matches['y1']), new Point((int)$matches['x2'], (int)$matches['y2']));
+        return new self(new Point((int)$matches['x1'], (int)$matches['y1']), new Point((int)$matches['x2'], (int)$matches['y2']), $allowDiagonally);
     }
 
     /** @return Point[] */
@@ -93,8 +103,13 @@ final class Line
             for ($x = $this->start->getX(); $x != $this->end->getX(); $x += $this->end->getX() > $this->start->getX() ? 1 : -1) {
                 $points[] = new Point($x, $this->start->getY());
             }
+        } elseif ($this->allowDiagonally && abs($this->start->getX() - $this->end->getX()) === abs($this->start->getY() - $this->end->getY())) {
+            // diagonally
+            for ($y = $this->start->getY(), $x = $this->start->getX(); $y != $this->end->getY(); $y += $this->end->getY() > $this->start->getY() ? 1 : -1, $x += $this->end->getX() > $this->start->getX() ? 1 : -1) {
+                $points[] = new Point($x, $y);
+            }
         } else {
-            return []; // diagonally
+            return []; // neither straight not diagonally
         }
 
         // add last point
