@@ -3,8 +3,9 @@
 declare(strict_types=1);
 
 $inputs = explode(PHP_EOL, trim(file_get_contents(__DIR__ . '/input.txt')));
-
 $growth_rate = 7;
+
+// Part 1:
 $num_of_days = 80;
 
 $population = array_map(fn(string $timer): LanternFish => new LanternFish($growth_rate, (int)$timer), explode(',', $inputs[0]));
@@ -51,3 +52,25 @@ final class LanternFish
         return $this->spawn;
     }
 }
+
+// Part 2:
+$num_of_days = 256;
+$population = array_fill(0, 9, 0);
+
+foreach (explode(',', $inputs[0]) as $timer) {
+    $population[(int)$timer]++;
+}
+
+for ($day = 0; $day < $num_of_days; $day++) {
+    $new_population = array_fill(0, 9, 0);
+    for ($i = 8; $i > 0; $i--) {
+        $new_population[$i - 1] = $population[$i];
+    }
+    $new_population[$growth_rate - 1] += $population[0];
+    $new_population[$growth_rate + 1] = $population[0];
+
+    $population = $new_population;
+}
+
+echo 'How many lanternfish would there be after 256 days?' . PHP_EOL;
+echo array_sum($population) . PHP_EOL;
