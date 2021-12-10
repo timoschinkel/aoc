@@ -4,8 +4,9 @@ declare(strict_types=1);
 
 $inputs = explode(PHP_EOL, trim(file_get_contents(__DIR__ . '/input.txt')));
 
-// Part 1:
 $parser = new StackParser();
+
+// Part 1:
 $score = 0;
 foreach ($inputs as $input) {
     try {
@@ -17,6 +18,32 @@ foreach ($inputs as $input) {
 
 echo 'What is the total syntax error score for those errors?' . PHP_EOL;
 echo $score . PHP_EOL;
+
+// Part 2:
+$token_values = [
+    ')' => 1,
+    ']' => 2,
+    '}' => 3,
+    '>' => 4,
+];
+
+$scores = [];
+foreach ($inputs as $input) {
+    try {
+        $missing_tokens = $parser->parse($input);
+
+        $scores[] = array_reduce(
+            $missing_tokens,
+            fn(int $carry, $token) => ($carry * 5) + $token_values[$token],
+            0
+        );
+    } catch (ParseException $_) {}
+}
+
+sort($scores);
+
+echo 'What is the middle score?' . PHP_EOL;
+echo $scores[floor(count($scores) / 2)] . PHP_EOL;
 
 class ParseException extends Exception
 {
@@ -72,10 +99,10 @@ final class StackParser
 
     /**
      * @param string $input
-     * @return void
+     * @return string[]
      * @throws ParseException
      */
-    public function parse(string $input): void
+    public function parse(string $input): array
     {
         $tokens = str_split($input);
 
@@ -97,5 +124,12 @@ final class StackParser
                 throw new RuntimeException("Unexpected token '${token}'");
             }
         }
+
+        return $this->getMissingTokens($stack);
+    }
+
+    private function getMissingTokens(array $stack): array
+    {
+        return array_map(fn(string $open): string => self::TOKEN_PAIRS[$open], array_reverse($stack));
     }
 }
