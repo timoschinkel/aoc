@@ -11,6 +11,13 @@ $flashes = $consortium->calculateNumberOfFlashes(100);
 echo 'How many total flashes are there after 100 steps?' . PHP_EOL;
 echo $flashes . PHP_EOL;
 
+// Step 2
+$consortium = Consortium::create($inputs);
+$synchronized = $consortium->calculateFirstSynchronizedFlash();
+
+echo 'What is the first step during which all octopuses flash?' . PHP_EOL;
+echo $synchronized . PHP_EOL;
+
 /**
  * Did you know a school of octopus is called a consortium?
  * @see https://www.theanimalfacts.com/glossary/animal-group-names/
@@ -40,6 +47,17 @@ final class Consortium
         }
 
         return $flashes;
+    }
+
+    public function calculateFirstSynchronizedFlash(): int
+    {
+        $step = 0;
+        do {
+            $flashes = $this->step();
+            $step++;
+        } while ($flashes < count($this->octopuses));
+
+        return $step;
     }
 
     private function step(): int
