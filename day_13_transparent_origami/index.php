@@ -9,7 +9,14 @@ $page = Page::create($inputs);
 $visible_dots = $page->fold1();
 
 echo 'How many dots are visible after completing just the first fold instruction on your transparent paper?' . PHP_EOL;
-echo $visible_dots . PHP_EOL;
+echo $visible_dots . PHP_EOL . PHP_EOL;
+
+// Part 2
+$page = Page::create($inputs);
+$page->fold2();
+
+echo 'What code do you use to activate the infrared thermal imaging camera system?' . PHP_EOL;
+echo $page . PHP_EOL;
 
 final class Page
 {
@@ -39,6 +46,15 @@ final class Page
         $this->positions = array_values($positions);
 
         return count($this->positions);
+    }
+
+    public function fold2(): string
+    {
+        while(count($this->folds) > 0) {
+            $this->fold1();
+        }
+
+        return '';
     }
 
     public static function create(array $inputs): self
