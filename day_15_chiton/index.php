@@ -9,8 +9,14 @@ $cavern = Cavern::create($inputs);
 $lowest_cost = $cavern->getLowestTotalRisk();
 
 echo 'What is the lowest total risk of any path from the top left to the bottom right?' . PHP_EOL;
-echo $lowest_cost . PHP_EOL;
+echo $lowest_cost . PHP_EOL . PHP_EOL;
 
+// Part 2
+$cavern = Cavern::create($inputs);
+$lowest_cost = $cavern->getLowestTotalRiskEnlarged(5);
+
+echo 'what is the lowest total risk of any path from the top left to the bottom right?' . PHP_EOL;
+echo $lowest_cost . PHP_EOL;
 
 final class Cavern
 {
@@ -56,6 +62,46 @@ final class Cavern
         }
 
         return end($distances);
+    }
+
+    public function getLowestTotalRiskEnlarged(int $factor): int
+    {
+        $this->enlarge($factor);
+        return $this->getLowestTotalRisk();
+    }
+
+    private function enlarge(int $factor): void
+    {
+        $original_width = $this->width;
+        $this->width *= $factor;
+
+        $enlarged = [];
+
+        // copy horizontal $factor - 1 times
+        $rows = array_chunk($this->risk_levels, $original_width);
+        foreach ($rows as $row) {
+            for($i = 0; $i < $factor; $i++) {
+                $enlarged = array_merge($enlarged, array_map(
+                    fn(int $value): int => $value + $i > 9 ? (($value + $i + 1) % 10) : $value + $i,
+                    $row
+                ));
+            }
+        }
+
+        $horizon = $enlarged;
+
+        // copy entire set $factor - 1 times
+        for ($i = 1; $i < $factor; $i++) {
+            $enlarged = array_merge(
+                $enlarged,
+                array_map(
+                    fn(int $value): int => $value + $i > 9 ? (($value + $i + 1) % 10) : $value + $i,
+                    $horizon
+                )
+            );
+        }
+
+        $this->risk_levels = $enlarged;
     }
 
     /**
