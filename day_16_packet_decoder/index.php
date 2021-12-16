@@ -14,6 +14,18 @@ foreach ($inputs as $input) {
     echo $packet->getSumOfVersionNumbers() . PHP_EOL;
 }
 
+echo PHP_EOL;
+
+// Part 2
+foreach ($inputs as $input) {
+    $transmission = new Transmission($input);
+    $packet = $transmission->parse();
+
+    echo 'What do you get if you evaluate the expression represented by your hexadecimal-encoded BITS transmission?' . PHP_EOL;
+//    echo $input . PHP_EOL;
+    echo $packet->getValue() . PHP_EOL;
+}
+
 final class Transmission
 {
     private string $packet;
@@ -149,7 +161,44 @@ final class Packet
 
     public function getValue(): ?int
     {
-        return $this->value;
+        if ($this->type === 4) {
+            return (int)$this->value;
+        }
+
+        $values = array_map(
+            fn(Packet $packet): int => (int)$packet->getValue(),
+            $this->embedded
+        );
+
+        if ($this->type === 0) {
+            return array_sum($values);
+        }
+
+        if ($this->type === 1) {
+            return array_product($values);
+        }
+
+        if ($this->type === 2) {
+            return min($values);
+        }
+
+        if ($this->type === 3) {
+            return max($values);
+        }
+
+        if ($this->type === 5) {
+            return $this->embedded[0]->getValue() > $this->embedded[1]->getValue() ? 1 : 0;
+        }
+
+        if ($this->type === 6) {
+            return $this->embedded[0]->getValue() < $this->embedded[1]->getValue() ? 1 : 0;
+        }
+
+        if ($this->type === 7) {
+            return $this->embedded[0]->getValue() === $this->embedded[1]->getValue() ? 1 : 0;
+        }
+
+        return (int)$this->value;
     }
 
     public function withEmbedded(Packet ...$embedded): self
