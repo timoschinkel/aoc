@@ -9,7 +9,14 @@ $trench = Trench::create($inputs[0]);
 $highest_y = $trench->findHighestY();
 
 echo 'What is the highest y position it reaches on this trajectory?' . PHP_EOL;
-echo $highest_y . PHP_EOL;
+echo $highest_y . PHP_EOL . PHP_EOL;
+
+// Part 2
+$trench = Trench::create($inputs[0]);
+$number_of_trajectories = $trench->findNumberOfSuccessfulTrajectories();
+
+echo 'How many distinct initial velocity values cause the probe to be within the target area after any step?' . PHP_EOL;
+echo $number_of_trajectories . PHP_EOL;
 
 final class Trench
 {
@@ -53,6 +60,22 @@ final class Trench
         }
 
         return $best !== null? $best->getHighestY() : 0;
+    }
+
+    public function findNumberOfSuccessfulTrajectories(): int
+    {
+        $trajectories = [];
+
+        for ($vX = 0; $vX <= $this->xTo; $vX++) {
+            for ($vY = $this->yTo * 2; $vY <= $this->yTo * -2; $vY++) {
+                $trajectory = $this->calculate($vX, $vY);
+                if ($trajectory->isSuccess()) {
+                    $trajectories[] = $trajectory;
+                }
+            }
+        }
+
+        return count($trajectories);
     }
 
     private function calculate(int $vStartX, int $vStartY): Trajectory
