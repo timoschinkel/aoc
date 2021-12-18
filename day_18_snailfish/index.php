@@ -17,6 +17,13 @@ foreach (array_slice($inputs, 1) as $input) {
 echo 'What is the magnitude of the final sum?' . PHP_EOL;
 echo $c->magnitude($sequence) . PHP_EOL;
 
+echo PHP_EOL;
+
+// Part 2
+$max_magnitude = $c->getMaxMagnitude($inputs);
+echo 'What is the largest magnitude of any sum of two different snailfish numbers from the homework assignment?' . PHP_EOL;
+echo $max_magnitude . PHP_EOL;
+
 final class Calculator
 {
     public function add(string $one, string $another): string
@@ -107,5 +114,22 @@ final class Calculator
         } while (!is_numeric($replacement));
 
         return intval($replacement);
+    }
+
+    public function getMaxMagnitude(array $sequences): int
+    {
+        $max = 0;
+        for ($i = 0; $i < count($sequences); $i++) {
+            for ($j = 0; $j < count($sequences); $j++) {
+                if ($i === $j) continue;
+
+                $max = max(
+                    $max,
+                    $this->magnitude($this->add($sequences[$i], $sequences[$j]))
+                );
+            }
+        }
+
+        return $max;
     }
 }
