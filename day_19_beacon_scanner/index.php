@@ -21,12 +21,21 @@ if ($measurements) {
     $scanners[] = new Scanner(count($scanners), ...$measurements);
 }
 
-// Part 1
 $plane = new Plane(...$scanners);
+
+// Part 1
 $num_of_beacons = $plane->getNumberOfBeacons();
 
 echo 'How many beacons are there?' . PHP_EOL;
 echo $num_of_beacons . PHP_EOL;
+
+echo PHP_EOL;
+
+// Part 2
+$max_manhattan_distance = $plane->getMaxManhattanDistance();
+
+echo 'What is the largest Manhattan distance between any two scanners?' . PHP_EOL;
+echo $max_manhattan_distance . PHP_EOL;
 
 final class Plane
 {
@@ -84,8 +93,6 @@ final class Plane
 
     public function getNumberOfBeacons(): int
     {
-        $this->fixated = []; // Scanners that are fixated, eg. we know their orientation and center
-
         $scanners = $this->scanners; // Create a copy of $this->scanner, so we reuse the code for part 2
 
         // Because all measurements are relative to the center of the scanner we can fixate the first scanner
@@ -93,6 +100,10 @@ final class Plane
         // $this->known_beacons will contain all coordinates of beacons for which we know the absolute
         // locations. These are indexed by a string representation for easy deduplication.
         $zero = array_shift($scanners);
+
+        // Scanners that are fixated, eg. we know their orientation and center. Add $zero as first fixated scanner.
+        $this->fixated = [$zero];
+
         $this->absolute_beacon_locations = array_combine(
             array_map(fn(Measurement $m): string => (string)$m, $zero->getRelativeMeasurements()),
             $zero->getRelativeMeasurements()
@@ -123,6 +134,18 @@ final class Plane
         }
 
         return count($this->absolute_beacon_locations);
+    }
+
+    public function getMaxManhattanDistance(): int
+    {
+        $max_distance = 0;
+        foreach ($this->fixated as $one) {
+            foreach ($this->fixated as $another) {
+                $max_distance = max($max_distance, $one->getManhattanDistance($another));
+            }
+        }
+
+        return $max_distance;
     }
 }
 
@@ -228,6 +251,12 @@ final class Scanner
     public function center(): Measurement
     {
         return $this->center;
+    }
+
+    public function getManhattanDistance(self $other): int
+    {
+        $sub = $this->center()->subtract($other->center());
+        return $sub->x() + $sub->y() + $sub->z();
     }
 
     public function __toString(): string
