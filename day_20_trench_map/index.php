@@ -16,6 +16,14 @@ $num_of_pixels_lit = $image->getNumberOfPixelsLit(2);
 echo 'How many pixels are lit in the resulting image?' . PHP_EOL;
 echo $num_of_pixels_lit . PHP_EOL;
 
+echo PHP_EOL;
+
+// Part 2
+$num_of_pixels_lit = $image->getNumberOfPixelsLit(48);
+
+echo 'How many pixels are lit in the resulting image?' . PHP_EOL;
+echo $num_of_pixels_lit . PHP_EOL;
+
 final class Image
 {
     private string $algorithm;
