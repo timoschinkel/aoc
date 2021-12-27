@@ -70,6 +70,14 @@ $max = $alu->getMaxSerialNumber();
 echo 'What is the largest model number accepted by MONAD?' . PHP_EOL;
 echo $max . PHP_EOL;
 
+echo PHP_EOL;
+
+// Part 2
+$min = $alu->getMinSerialNumber();
+
+echo 'What is the smallest model number accepted by MONAD?' . PHP_EOL;
+echo $min . PHP_EOL;
+
 final class ALU
 {
     private array $instructions;
@@ -121,7 +129,6 @@ final class ALU
             $x = $this->x[$digit];
 
             if ($z === 1) {
-                echo 'Push ' . $this->y[$digit] . ' (' . $digit . ')' . PHP_EOL;
                 array_push($z_stack, [$this->y[$digit], $digit]);
             } else {                // last_z_digit == current_z_digit + difference
                 [$y, $prev_digit] = array_pop($z_stack);
@@ -135,6 +142,36 @@ final class ALU
                 } else {
                     $serial_number[$digit] = 9;
                     $serial_number[$prev_digit] = 9;
+                }
+            }
+        }
+
+        return join($serial_number);
+    }
+
+    public function getMinSerialNumber(): string
+    {
+        $serial_number = array_fill(0, 13, 0);
+
+        $z_stack = [];
+        foreach (range(0, 13) as $digit) {
+            $z = $this->z[$digit];
+            $x = $this->x[$digit];
+
+            if ($z === 1) {
+                array_push($z_stack, [$this->y[$digit], $digit]);
+            } else {                // last_z_digit == current_z_digit + difference
+                [$y, $prev_digit] = array_pop($z_stack);
+                $difference = intval($x + $y);
+                if ($difference < 0) {
+                    $serial_number[$digit] = 1;
+                    $serial_number[$prev_digit] = 1 - $difference;
+                } elseif ($difference > 0) {
+                    $serial_number[$digit] = 1 + $difference;
+                    $serial_number[$prev_digit] = 1;
+                } else {
+                    $serial_number[$digit] = 1;
+                    $serial_number[$prev_digit] = 1;
                 }
             }
         }
