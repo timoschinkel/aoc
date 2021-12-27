@@ -5,59 +5,14 @@ declare(strict_types=1);
 $inputs = explode(PHP_EOL, trim(file_get_contents(__DIR__ . '/input.txt')));
 
 /*
- * Ideas
- * - brute force
- * - inspect the inspections per digit; is there a smart pattern?
- */
-
-//  93499629698999
-//  11164118121471
-
-// Part 0
-//$alu = ALU::create($inputs);
-//
-//foreach (range(1, 9) as $w) {
-//    $vars = $alu->calculate([(string)$w]);
-//    echo '$w = ' . $w . "\t" . json_encode($vars) . PHP_EOL;
-//}
-//
-//die;
-
-// first 6 digits
-// z = (((((((((((w0 + 14) * 26) + w1 + 8) * 26) + w2 + 5) * 26) + w4 + 4) * 26) + w5 + 10) / 26) * 26) + w6 + 13
-// or
-// z = (((((((((((w0 + 14) * 26) + w1 + 8) * 26) + w2 + 5) * 26) + w4 + 4) * 26) + w5 + 10) / 26) * 1)
-
-//foreach (range(1, 9) as $w0) {
-//    foreach (range(1, 9) as $w1) {
-//        foreach (range(1, 9) as $w2) {
-//            foreach (range(1, 9) as $w3) {
-//                foreach (range(1, 9) as $w4) {
-//                    foreach (range(4, 4) as $w5) {
-////                        $z = (((((((($w0 + 14) * 26) + $w1 + 8) * 26) + $w2 + 5) * 26) + $w4 + 4) * 26) + $w5 + 10;
-//                        $x = (((((((((($w0 + 14) * 26) + $w1 + 8) * 26) + $w2 + 5) * 26) + $w4 + 4) * 26) + $w5 + 10) % 26) - 13;
-//                        echo json_encode([$w0, $w1, $w2, $w3, $w4, $w5]) . "\t" . array_sum([$w0, $w1, $w2, $w3, $w4, $w5]) . "\t" . $x . PHP_EOL;
-//                    }
-//                }
-//            }
-//        }
-//    }
-//}
-//die;
-
-
-$z = [1, 1, 1, 26, 1, 26, 1, 26, 1, 1, 26, 26, 26, 26];
-$x = [13, 12, 11, 0, 15, -13, 10, -9, 11, 13, -14, 3, 2, 14];
-$y = [14, 8, 5, 4, 10, 13, 16, 5, 6, 13, 6, 7, 13, 3];
-
-
-/*
  * The implementation of this assignment is heavily influenced - if not more - on a very detailed explanation by a
  * Reddit user called `u/dynker`: https://www.reddit.com/r/adventofcode/comments/roj2uk/decompiling_day_24/
  *
  * I will not repeat the entire explanation, but the tl/dr; 9^14 is way too much to brute force. As such a more clever
  * solution must be possible. This solution comes from the input. There's a pattern visible for the different digits
  * where x is being incremented, y is being incremented and z is either being divided by 26 or moduloed by 26.
+ *
+ * Another very helpful comment was from `u/mapleoctopus`: https://www.reddit.com/r/adventofcode/comments/rnejv5/comment/hpsm1gk/?utm_source=reddit&utm_medium=web2x&context=3
  *
  * I have tried to build a solution that would work with any *valid* input.
  */
