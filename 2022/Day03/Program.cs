@@ -12,3 +12,14 @@ foreach (var line in input)
 }
 
 Console.WriteLine($"What is the sum of the priorities of those item types? {score}");
+
+var score2 = 0;
+for (var i = 0; i < input.Length; i += 3)
+{
+    int intersect =
+        input[i].ToCharArray().Intersect(input[i + 1].ToCharArray()).ToArray().Intersect(input[i + 2].ToCharArray()).ToArray()[0];
+    
+    score2 += intersect >= 97 ? /* lowercase */ intersect - 96 : /* uppercase */ intersect - 38;
+}
+
+Console.WriteLine($"What is the sum of the priorities of those item types? {score2}");
