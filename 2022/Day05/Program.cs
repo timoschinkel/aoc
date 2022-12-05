@@ -31,7 +31,7 @@ Dictionary<int, Stack<char>> assignment = new Dictionary<int, Stack<char>>
 {
     { 1, new Stack<char>(new char[]{'C', 'Z', 'N', 'B', 'M', 'W', 'Q', 'V'}) }, 
     { 2, new Stack<char>(new char[]{'H', 'Z', 'R', 'W', 'C', 'B'}) }, 
-    { 3, new Stack<char>(new char[]{'H', 'Z', 'R', 'W', 'C', 'B'}) }, 
+    { 3, new Stack<char>(new char[]{'F', 'Q', 'R', 'J'}) }, 
     { 4, new Stack<char>(new char[]{'Z', 'S', 'W', 'H', 'F', 'N', 'M', 'T'}) }, 
     { 5, new Stack<char>(new char[]{'G', 'F', 'W', 'L', 'N', 'Q', 'P'}) }, 
     { 6, new Stack<char>(new char[]{'L', 'P', 'W'}) }, 
@@ -42,7 +42,8 @@ Dictionary<int, Stack<char>> assignment = new Dictionary<int, Stack<char>>
 
 Regex rx = new Regex(@"^move ([0-9]+) from ([0-9]+) to ([0-9]+)$");
 
-var stack = assignment;
+var stack = assignment.ToDictionary(entry => entry.Key, entry => new Stack<char>(entry.Value.Reverse()));
+var stackTwo = assignment.ToDictionary(entry => entry.Key, entry => new Stack<char>(entry.Value.Reverse()));
 
 foreach (var line in input)
 {
@@ -53,9 +54,16 @@ foreach (var line in input)
     var source = Int32.Parse(match.Groups[2].Value);
     var destination = Int32.Parse(match.Groups[3].Value);
 
+    var temp = new Stack<char>();
     for (var i = 0; i < amount; i++)
     {
         stack[destination].Push(stack[source].Pop());
+        temp.Push(stackTwo[source].Pop());
+    }
+
+    foreach (var c in temp)
+    {
+        stackTwo[destination].Push(c);
     }
 }
 
@@ -66,6 +74,14 @@ foreach (var entry in stack)
 }
 
 Console.WriteLine($"After the rearrangement procedure completes, what crate ends up on top of each stack? {partOne}");
+
+string partTwo = "";
+foreach (var entry in stackTwo)
+{
+    partTwo += entry.Value.Peek();
+}
+
+Console.WriteLine($"After the rearrangement procedure completes, what crate ends up on top of each stack? {partTwo}");
 
 void DebugPrint(Dictionary<int, Stack<char>> s)
 {
