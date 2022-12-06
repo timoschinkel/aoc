@@ -11,4 +11,14 @@ foreach (var line in input)
             break;
         }
     }
+    
+    for (var i = 0; i < line.Length - 14; i++)
+    {
+        if (line.Substring(i, 14).ToCharArray().Distinct().Count() == 14)
+        {
+            // unique sequence found!
+            Console.WriteLine($"How many characters need to be processed before the first start-of-message marker is detected? {i + 14}");
+            break;
+        }
+    }
 }
