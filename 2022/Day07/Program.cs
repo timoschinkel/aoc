@@ -45,3 +45,10 @@ foreach (var f in recursive)
 }
 
 Console.WriteLine($"What is the sum of the total sizes of those directories? {score}");
+
+var total = recursive.GetValueOrDefault("", 0);
+var toFreeUp = 30000000 - (70000000 - total);
+// Console.WriteLine($"Total: {total}, to free up: {toFreeUp}");
+
+var toDelete = recursive.Where(f => f.Value >= toFreeUp).OrderBy(f => f.Value).First();
+Console.WriteLine($"What is the total size of that directory? {toDelete.Value}");
