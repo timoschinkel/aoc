@@ -2,7 +2,7 @@
 
 int width = input[0].Length, height = input.Length;
 int[,] forest = new int[width, height];
-bool[,] visible = new bool[width, height];
+bool[,]? visible = new bool[width, height];
 
 for (var column = 0; column < width; column++)
 {
@@ -82,22 +82,77 @@ for (var column = 0; column < width; column++)
 
 Console.WriteLine($"how many trees are visible from outside the grid? {score}");
 
+/*
+ * For part 2 I could in theory reuse the two scans above; I can keep an index for all the tree heights and the
+ * amount of steps away they are (for the vertical view lines it would be an index per column).
+ *
+ * I however have opted for the brute force approach; Iterate over the field and walk all four directions
+ * until you reach the border or a higher tree.
+ */
+
+int[,] scenic = new int[width, height];
+int maxScenicScore = 0;
+
+for (var column = 0; column < width; column++)
+{
+    for (var row = 0; row < height; row++)
+    {
+        var tree = forest[column, row];
+        var up = GetScenicScoreVertical(column, row, -1);
+        var left = GetScenicScoreHorizontal(column, row, -1);
+        var right = GetScenicScoreHorizontal(column, row, 1);
+        var down = GetScenicScoreVertical(column, row, 1);
+        int scenicScore = left * up * right * down;
+
+        scenic[column, row] = scenicScore;
+        maxScenicScore = Math.Max(maxScenicScore, scenicScore);
+    }
+}
+
+// Print(scenic);
+Console.WriteLine($"What is the highest scenic score possible for any tree? {maxScenicScore}");
+
+int GetScenicScoreHorizontal(int column, int row, int delta)
+{
+    int scenicScore = 0, tree = forest[column, row];
+    for (var c = column + delta; c >= 0 && c < width; c += delta)
+    {
+        scenicScore++;
+        if (forest[c, row] >= tree)
+        {
+            break;
+        }
+    }
+
+    return scenicScore;
+}
+
+int GetScenicScoreVertical(int column, int row, int delta)
+{
+    int scenicScore = 0, tree = forest[column, row];
+    for (var r = row + delta; r >= 0 && r < height; r += delta)
+    {
+        scenicScore++;
+        if (forest[column, r] >= tree)
+        {
+            break;
+        }
+    }
+
+    return scenicScore;
+}
+
 // Debug
-void Print(int[,] forest, bool[,] visible)
+void Print(int[,] forest, bool[,]? visible = null)
 {
     var color = Console.ForegroundColor;
     for (var row = 0; row < height; row++)
     {
         for (var column = 0; column < width; column++)
         {
-            Console.ForegroundColor = visible[column, row] ? ConsoleColor.Magenta : color;
-            if (column == 73 && row == 96)
+            if (visible != null)
             {
-                Console.ForegroundColor = ConsoleColor.Yellow;
-            }
-            if (column == 24 && row == 95)
-            {
-                Console.ForegroundColor = ConsoleColor.Yellow;
+                Console.ForegroundColor = visible[column, row] ? ConsoleColor.Magenta : color;   
             }
             Console.Write(forest[column, row]);
         }
