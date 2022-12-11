@@ -77,7 +77,6 @@ class Program
         Console.WriteLine($"What is the level of monkey business after 20 rounds of stuff-slinging simian shenanigans? {score}");
         
          // Part 2
-
          long commonDivider = monkeys.Select(monkey => (long)monkey.Divisible).Aggregate((long)1, (l, l1) => l * l1);
          monkeys = FromInput(args.Contains("example"));
 
@@ -232,7 +231,7 @@ class Program
             TargetFalse = targetFalse;
         }
         
-        public (int, int)? Inspect()
+        public (long, int)? Inspect()
         {
             if (Items.Count == 0)
             {
@@ -244,7 +243,7 @@ class Program
             var item = Items.First();
             Items.RemoveAt(0);
             
-            var newWorryLevel = (int)(_operation(item) / 3);
+            long newWorryLevel = _operation(item) / 3;
             
             return (
                 newWorryLevel,
