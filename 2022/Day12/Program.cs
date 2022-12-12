@@ -54,6 +54,15 @@ class Program
         // and from that path we can determine the amount of steps it took to get there. We check all four possible 
         // neighbors and check if 1. the value is <= value + 1 2. we have not visited in less steps. If those criteria
         // match we add the neighbor on a queue and after checking all four neighbors we process the queue.
+        //
+        // Part 2; Given that part 1 is already solved there are two approaches to solve part 2. The first - naive -
+        // approach is to iterate over all positions in heightmap that are of height `a`, and run the solution from 
+        // part 1 and take the lowest value. Another approach is to reverse the solution. So start at the position 
+        // marked as E, put eligible positions on the stack until you have exhausted the stack. Take the lowest number 
+        // of steps to get to an `a` level coordinate.
+        //
+        // Post mortem; This puzzle reminded me of the puzzle from day 15 from 2021. In that puzzle I struggled, but 
+        // eventually implemented a similar solution as I implemented in this solution.
 
         var initialGrid = (Grid<int>)grid.Clone();
         var initialSteps = (Grid<int>)steps.Clone();
@@ -123,91 +132,156 @@ class Program
         
         Print();
         Console.WriteLine($"What is the fewest steps required to move from your current position to the location that should get the best signal? {steps.Get(end)}");
-        
-        // Part 2; Given that part 1 is already solved there are two approaches to solve part 2. The first - naive -
-        // approach is to iterate over all positions in heightmap that are of height `a`, and run the solution from 
-        // part 1 and take the lowest value. Another approach is to reverse the solution. So start at the position 
-        // marked as E, put eligible positions on the stack until you have exhausted the stack. Take the lowest number 
-        // of steps to get to an `a` level coordinate.
 
         // Naive solution:
         
+        // var min = Int32.MaxValue;
+        // for (var row = 0; row < height; row++)
+        // {
+        //     for (var column = 0; column < width; column++)
+        //     {
+        //         if (initialGrid.Get(row, column) == 0) // 0 == a
+        //         {
+        //             grid = (Grid<int>)initialGrid.Clone();
+        //             steps = (Grid<int>)initialSteps.Clone();
+        //             
+        //             steps.Set(row, column, 0);
+        //             
+        //             stack = new Stack<Coordinate>();
+        //             stack.Push(new Coordinate{ Row = row, Column = column });
+        //
+        //             while (stack.Count > 0)
+        //             {
+        //                 var candidate = stack.Pop();
+        //
+        //                 if (candidate.Row == end.Row && candidate.Column == end.Column)
+        //                 {
+        //                     continue;
+        //                 }
+        //                 
+        //                 var v = grid.Get(candidate);
+        //                 var s = steps.Get(candidate);
+        //                 
+        //                 if (DEBUG) Console.WriteLine($"Handling {candidate} (height: {v}, steps: {s})");
+        //
+        //                 // Look up
+        //                 var up = new Coordinate { Row = candidate.Row - 1, Column = candidate.Column };
+        //                 if (candidate.Row > 0 
+        //                     && grid.Get(up) <= grid.Get(candidate) + 1
+        //                     && steps.Get(up) > steps.Get(candidate) + 1)
+        //                 {
+        //                     if (DEBUG) Console.WriteLine($"Add up (height: {grid.Get(up)}, steps: {steps.Get(up)})");
+        //                     steps.Set(up, steps.Get(candidate) + 1);
+        //                     stack.Push(up);
+        //                 }
+        //                 
+        //                 // Look right
+        //                 var right = new Coordinate { Row = candidate.Row, Column = candidate.Column + 1 };
+        //                 if (right.Column < width 
+        //                     && grid.Get(right) <= grid.Get(candidate) + 1
+        //                     && steps.Get(right) > steps.Get(candidate) + 1)
+        //                 {
+        //                     if (DEBUG) Console.WriteLine($"Add right (height: {grid.Get(right)}, steps: {steps.Get(right)})");
+        //                     steps.Set(right, steps.Get(candidate) + 1);
+        //                     stack.Push(right);
+        //                 }
+        //                 
+        //                 // Look down
+        //                 var down = new Coordinate { Row = candidate.Row + 1, Column = candidate.Column };
+        //                 if (down.Row < height 
+        //                     && grid.Get(down) <= grid.Get(candidate) + 1
+        //                     && steps.Get(down) > steps.Get(candidate) + 1)
+        //                 {
+        //                     if (DEBUG) Console.WriteLine($"Add down (height: {grid.Get(down)}, steps: {steps.Get(down)})");
+        //                     steps.Set(down, steps.Get(candidate) + 1);
+        //                     stack.Push(down);
+        //                 }
+        //                 
+        //                 // Look left
+        //                 var left = new Coordinate { Row = candidate.Row, Column = candidate.Column - 1 };
+        //                 if (candidate.Column > 0 
+        //                     && grid.Get(left) <= grid.Get(candidate) + 1
+        //                     && steps.Get(left) > steps.Get(candidate) + 1)
+        //                 {
+        //                     if (DEBUG) Console.WriteLine($"Add left (height: {grid.Get(left)}, steps: {steps.Get(left)})");
+        //                     steps.Set(left, steps.Get(candidate) + 1);
+        //                     stack.Push(left);
+        //                 }
+        //             }
+        //
+        //             min = Math.Min(min, steps.Get(end));
+        //         }
+        //     }
+        // }
+        
+        // Optimized solution:
+        
+        grid = (Grid<int>)initialGrid.Clone();
+        steps = (Grid<int>)initialSteps.Clone();
+        steps.Set(end, 0);
+
+        stack = new Stack<Coordinate>();
+        stack.Push(end);
+
         var min = Int32.MaxValue;
-        for (var row = 0; row < height; row++)
+        while (stack.Count > 0)
         {
-            for (var column = 0; column < width; column++)
+            var candidate = stack.Pop();
+
+            if (grid.Get(candidate) == 0 /* = a */)
             {
-                if (initialGrid.Get(row, column) == 0) // 0 == a
-                {
-                    grid = (Grid<int>)initialGrid.Clone();
-                    steps = (Grid<int>)initialSteps.Clone();
-                    
-                    steps.Set(row, column, 0);
-                    
-                    stack = new Stack<Coordinate>();
-                    stack.Push(new Coordinate{ Row = row, Column = column });
-        
-                    while (stack.Count > 0)
-                    {
-                        var candidate = stack.Pop();
-        
-                        if (candidate.Row == end.Row && candidate.Column == end.Column)
-                        {
-                            continue;
-                        }
-                        
-                        var v = grid.Get(candidate);
-                        var s = steps.Get(candidate);
-                        
-                        if (DEBUG) Console.WriteLine($"Handling {candidate} (height: {v}, steps: {s})");
-        
-                        // Look up
-                        var up = new Coordinate { Row = candidate.Row - 1, Column = candidate.Column };
-                        if (candidate.Row > 0 
-                            && grid.Get(up) <= grid.Get(candidate) + 1
-                            && steps.Get(up) > steps.Get(candidate) + 1)
-                        {
-                            if (DEBUG) Console.WriteLine($"Add up (height: {grid.Get(up)}, steps: {steps.Get(up)})");
-                            steps.Set(up, steps.Get(candidate) + 1);
-                            stack.Push(up);
-                        }
-                        
-                        // Look right
-                        var right = new Coordinate { Row = candidate.Row, Column = candidate.Column + 1 };
-                        if (right.Column < width 
-                            && grid.Get(right) <= grid.Get(candidate) + 1
-                            && steps.Get(right) > steps.Get(candidate) + 1)
-                        {
-                            if (DEBUG) Console.WriteLine($"Add right (height: {grid.Get(right)}, steps: {steps.Get(right)})");
-                            steps.Set(right, steps.Get(candidate) + 1);
-                            stack.Push(right);
-                        }
-                        
-                        // Look down
-                        var down = new Coordinate { Row = candidate.Row + 1, Column = candidate.Column };
-                        if (down.Row < height 
-                            && grid.Get(down) <= grid.Get(candidate) + 1
-                            && steps.Get(down) > steps.Get(candidate) + 1)
-                        {
-                            if (DEBUG) Console.WriteLine($"Add down (height: {grid.Get(down)}, steps: {steps.Get(down)})");
-                            steps.Set(down, steps.Get(candidate) + 1);
-                            stack.Push(down);
-                        }
-                        
-                        // Look left
-                        var left = new Coordinate { Row = candidate.Row, Column = candidate.Column - 1 };
-                        if (candidate.Column > 0 
-                            && grid.Get(left) <= grid.Get(candidate) + 1
-                            && steps.Get(left) > steps.Get(candidate) + 1)
-                        {
-                            if (DEBUG) Console.WriteLine($"Add left (height: {grid.Get(left)}, steps: {steps.Get(left)})");
-                            steps.Set(left, steps.Get(candidate) + 1);
-                            stack.Push(left);
-                        }
-                    }
-        
-                    min = Math.Min(min, steps.Get(end));
-                }
+                // Found an `a`, no need to continue
+                min = Math.Min(min, steps.Get(candidate));
+                continue;
+            }
+            
+            var v = grid.Get(candidate);
+            var s = steps.Get(candidate);
+            
+            if (DEBUG) Console.WriteLine($"Handling {candidate} (height: {v}/{alphabet[v]}, steps: {s})");
+
+            // Look up
+            var up = new Coordinate { Row = candidate.Row - 1, Column = candidate.Column };
+            if (candidate.Row > 0 
+                && grid.Get(up) >= grid.Get(candidate) - 1
+                && steps.Get(up) > steps.Get(candidate) + 1)
+            {
+                if (DEBUG) Console.WriteLine($"Add up (height: {grid.Get(up)}/{alphabet[grid.Get(up)]}, steps: {steps.Get(up)})");
+                steps.Set(up, steps.Get(candidate) + 1);
+                stack.Push(up);
+            }
+            
+            // Look right
+            var right = new Coordinate { Row = candidate.Row, Column = candidate.Column + 1 };
+            if (right.Column < width 
+                && grid.Get(right) >= grid.Get(candidate) - 1
+                && steps.Get(right) > steps.Get(candidate) + 1)
+            {
+                if (DEBUG) Console.WriteLine($"Add right (height: {grid.Get(right)}/{alphabet[grid.Get(right)]}, steps: {steps.Get(right)})");
+                steps.Set(right, steps.Get(candidate) + 1);
+                stack.Push(right);
+            }
+            
+            // Look down
+            var down = new Coordinate { Row = candidate.Row + 1, Column = candidate.Column };
+            if (down.Row < height 
+                && grid.Get(down) >= grid.Get(candidate) - 1
+                && steps.Get(down) > steps.Get(candidate) + 1)
+            {
+                if (DEBUG) Console.WriteLine($"Add down (height: {grid.Get(down)}/{alphabet[grid.Get(down)]}, steps: {steps.Get(down)})");
+                steps.Set(down, steps.Get(candidate) + 1);
+                stack.Push(down);
+            }
+            
+            // Look left
+            var left = new Coordinate { Row = candidate.Row, Column = candidate.Column - 1 };
+            if (candidate.Column > 0 
+                && grid.Get(left) >= grid.Get(candidate) - 1
+                && steps.Get(left) > steps.Get(candidate) + 1)
+            {
+                if (DEBUG) Console.WriteLine($"Add left (height: {grid.Get(left)}/{alphabet[grid.Get(left)]}, steps: {steps.Get(left)})");
+                steps.Set(left, steps.Get(candidate) + 1);
+                stack.Push(left);
             }
         }
         
