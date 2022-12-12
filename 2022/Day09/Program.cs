@@ -22,18 +22,13 @@
 
 var DEBUG = false;
 
-int headX = 0, headY = 0, tailX = 0, tailY = 0;
 List<(int, int)> tailLocations = new List<(int, int)>{ (0, 0) };
 List<(int, int)> tailLocations2 = new List<(int, int)>{ (0, 0) };
 
-(int, int)[] rope = new (int, int)[] // index 0 is head, index 9 is tail
-{
-    (0, 0), (0, 0), (0, 0), (0, 0), (0, 0), (0, 0), (0, 0), (0, 0), (0, 0), (0, 0)
-};
+(int, int)[] rope = Enumerable.Repeat((0, 0), 10).ToArray();
 
 int maxX = 0, maxY = 0, minX = 0, minY = 0; // for drawing purposes
 Print();
-Print2();
 
 foreach (var line in input)
 {
@@ -43,121 +38,59 @@ foreach (var line in input)
         Console.WriteLine("");
     }
 
-    int dX = 0, dY = 0;
-    switch (line[0])
-    {
-        case 'D':
-            dY = Int32.Parse(line.Replace("D ", ""));
-            Down(dY);
-            break;
-        case 'U':
-            dY = Int32.Parse(line.Replace("U ", ""));
-            Up(dY);
-            break;
-        case 'L':
-            dX = Int32.Parse(line.Replace("L ", ""));
-            Left(dX);
-            break;
-        case 'R':
-            dX = Int32.Parse(line.Replace("R ", ""));
-            Right(dX);
-            break;
-        default:
-            throw new Exception("This should not happen ...");
-    }
-    
-    Print();
-    Print2();
-}
+    var direction = line[0];
+    var steps = Int32.Parse(line.Replace("D ", "").Replace("U ", "").Replace("L ", "").Replace("R ", ""));
 
-void Up(int steps)
-{
     for (var step = 0; step < steps; step++)
     {
-        Move(headX, headY + 1);
-    }
-}
-
-void Down(int steps)
-{
-    for (var step = 0; step < steps; step++)
-    {
-        Move(headX, headY - 1);
-    }
-}
-
-void Left(int steps)
-{
-    for (var step = 0; step < steps; step++)
-    {
-        Move(headX - 1, headY);
-    }
-}
-
-void Right(int steps)
-{
-    for (var step = 0; step < steps; step++)
-    {
-        Move(headX + 1, headY);
-    }
-}
-
-void Move(int x, int y)
-{
-    // Perform part 2 in separate method
-    MoveHead(x, y);
-    
-    // Move head
-    headX = x;
-    headY = y;
-    
-    // Move Tail towards head, if needed
-    if (Math.Abs(headX - tailX) > 1 || Math.Abs(headY - tailY) > 1)
-    {
-        var dx = headX - tailX;
-        if (dx >= 1) tailX++;
-        if (dx <= -1) tailX--;
-		
-        var dy = headY - tailY;
-        if (dy >= 1) tailY++;
-        if (dy <= -1) tailY--;
-        
-        tailLocations.Add((tailX, tailY));
-    }
-
-    maxX = Math.Max(maxX, headX);
-    minX = Math.Min(minX, headX);
-    maxY = Math.Max(maxY, headY);
-    minY = Math.Min(minY, headY);
-}
-
-void MoveHead(int x, int y)
-{
-    // Move head
-    rope[0] = (x, y);
-    
-    // perform move for each part of the rope
-    for (var knot = 1; knot < rope.Length; knot++)
-    {
-        var (leaderX, leaderY) = rope[knot - 1];
-        var (chaserX, chaserY) = rope[knot];
-        
-        if (Math.Abs(leaderX - chaserX) > 1 || Math.Abs(leaderY - chaserY) > 1)
+        switch (direction)
         {
-            var dx = leaderX - chaserX;
-            if (dx >= 1) chaserX++;
-            if (dx <= -1) chaserX--;
-		
-            var dy = leaderY - chaserY;
-            if (dy >= 1) chaserY++;
-            if (dy <= -1) chaserY--;
-
-            rope[knot] = (chaserX, chaserY);
+            case 'D':
+                rope[0].Item2 -= 1;
+                minY = Math.Min(minY, rope[0].Item2);
+                break;
+            case 'U':
+                rope[0].Item2 += 1;
+                maxY = Math.Max(maxY, rope[0].Item2);
+                break;
+            case 'L':
+                rope[0].Item1 -= 1;
+                minX = Math.Min(minX, rope[0].Item1);
+                break;
+            case 'R':
+                rope[0].Item1 += 1;
+                maxX = Math.Max(maxY, rope[0].Item1);
+                break;
+            default:
+                throw new Exception("This should not happen ...");
         }
-    }
     
-    // Add tail location to list
-    tailLocations2.Add(rope[9]);
+        // Move rest of the rope
+        // perform move for each part of the rope
+        for (var knot = 1; knot < rope.Length; knot++)
+        {
+            var (leaderX, leaderY) = rope[knot - 1];
+            var (chaserX, chaserY) = rope[knot];
+        
+            if (Math.Abs(leaderX - chaserX) > 1 || Math.Abs(leaderY - chaserY) > 1)
+            {
+                var dx = leaderX - chaserX;
+                if (dx >= 1) chaserX++;
+                if (dx <= -1) chaserX--;
+		
+                var dy = leaderY - chaserY;
+                if (dy >= 1) chaserY++;
+                if (dy <= -1) chaserY--;
+
+                rope[knot] = (chaserX, chaserY);
+            }
+        }
+    
+        tailLocations.Add(rope[1]);
+        tailLocations2.Add(rope[9]);   
+    }
+
+    Print();
 }
 
 int score = tailLocations.Distinct().Count();
@@ -170,30 +103,6 @@ void Print()
 {
     if (DEBUG == false) return;
 
-    Console.WriteLine($"Head: ({headX}, {headY}), tail: ({tailX}, {tailY})");
-    for (var row = Math.Max(4, maxY); row >= minY; row--)
-    {
-        string ht = "", positions = ""; 
-        for (var column = minX; column <= Math.Max(5, maxX); column++)
-        {
-            char c = '.';
-            if (row == 0 && column == 0) c = 's';
-            if (row == tailY && column == tailX) c = 'T';
-            if (row == headY && column == headX) c = 'H';
-
-            ht += c;
-            positions += tailLocations.Contains((column, row)) ? "#" : ".";
-        }
-        Console.WriteLine($"{ht}          {positions}");
-    }
-    Console.WriteLine("");
-}
-
-void Print2()
-{
-    if (DEBUG == false) return;
-
-    Console.WriteLine($"Head: ({headX}, {headY}), tail: ({tailX}, {tailY})");
     for (var row = Math.Max(4, maxY); row >= minY; row--)
     {
         string ht = "", positions = ""; 
@@ -208,7 +117,7 @@ void Print2()
             }
 
             ht += c;
-            positions += tailLocations2.Contains((column, row)) ? "#" : ".";
+            positions += tailLocations2.Contains((column, row)) ? "#" : (tailLocations.Contains((column, row)) ? "*" : ".");
         }
         Console.WriteLine($"{ht}          {positions}");
     }

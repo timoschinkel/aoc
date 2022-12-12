@@ -1,4 +1,7 @@
-﻿string[] input = File.ReadAllLines(@"./input.txt");
+﻿var watch = new System.Diagnostics.Stopwatch();
+watch.Start();
+
+string[] input = File.ReadAllLines(@"./input.txt");
 
 int width = input[0].Length, height = input.Length;
 int[,] forest = new int[width, height];
@@ -12,6 +15,10 @@ for (var column = 0; column < width; column++)
         visible[column, row] = row == 0 || row == height - 1 || column == 0 || column == width - 1; // border is always visible
     }
 }
+
+watch.Stop();
+Console.WriteLine($"Reading input: {watch.ElapsedMilliseconds}ms");
+watch.Restart();
 
 /*
  * The trees can be visible per row - left to right OR right to left - and per column - top to bottom
@@ -69,8 +76,6 @@ for (var row = width - 2; row >= 1; row--)
     }
 }
 
-Print(forest, visible);
-
 var score = 0;
 for (var column = 0; column < width; column++)
 {
@@ -80,7 +85,13 @@ for (var column = 0; column < width; column++)
     }
 }
 
+watch.Stop();
+Console.WriteLine($"Part one: {watch.ElapsedMilliseconds}ms");
+
+//Print(forest, visible);
 Console.WriteLine($"how many trees are visible from outside the grid? {score}");
+
+watch.Restart();
 
 /*
  * For part 2 I could in theory reuse the two scans above; I can keep an index for all the tree heights and the
@@ -108,6 +119,9 @@ for (var column = 0; column < width; column++)
         maxScenicScore = Math.Max(maxScenicScore, scenicScore);
     }
 }
+
+watch.Stop();
+Console.WriteLine($"Part two: {watch.ElapsedMilliseconds}ms");
 
 // Print(scenic);
 Console.WriteLine($"What is the highest scenic score possible for any tree? {maxScenicScore}");
