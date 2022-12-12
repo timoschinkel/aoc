@@ -1,4 +1,6 @@
-﻿namespace Day10;
+﻿using System.Reflection;
+
+namespace Day10;
 
 class Program
 {
@@ -6,7 +8,7 @@ class Program
     {
         bool DEBUG = args.Contains("debug");
 
-        string[] input = File.ReadAllLines(@"./input.txt");
+        string[] input = File.ReadAllLines($"{Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location)}/input.txt");
         
         // Part 1 is about reading the puzzle properly imo. Check the instruction for every cycle. When a noop is 
         // encountered all we do is increase the cycle with one AND perform the check if we need to increase the score.
