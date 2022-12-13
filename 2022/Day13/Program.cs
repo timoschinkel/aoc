@@ -20,6 +20,16 @@ class Program
         // For the comparison I eventually resorted to implementing the rules as they are explained in the examples 
         // almost verbatim.
         
+        // Part 2; I had more trouble with adding the two additional codes as some functions are pure and others aren't.
+        // Take all the lines, remove all the empty lines, add the two additional codes. Now we have a list of all codes
+        // and by using the built-in sorting algorithm we can use the outcome of IsGood() to tell if one is smaller than
+        // the other. Search the list for the two added codes - I opted to convert back to a JSON string, as I did not
+        // feel like writing compare/equals functions - and adjust from zero-based lists to one-based puzzles.
+        
+        // Post mortem; A puzzle that was more tricky that I had anticipated. The big epiphany was that the input is
+        // valid JSON. But that was replaced with worries about how to handle untyped JSON parsing in C#. The key proved
+        // to be reading the examples real good.
+        
         var pair = 0;
         var score = 0;
         for (var i = 0; i < input.Length; i += 3)
@@ -39,6 +49,18 @@ class Program
         }
         
         Console.WriteLine($"What is the sum of the indices of those pairs? {score}");
+
+        input = input.Append("[[2]]").Append("[[6]]").ToArray();
+        var list = input.ToList()
+            .FindAll(line => !line.Equals(""))
+            .Select(line => JsonNode.Parse(line).AsArray())
+            .ToList();
+        list.Sort(((one, another) => IsGood(one, another) == false ? 1 : -1));
+        
+        var two = list.Select(json => json.ToJsonString()).ToList().FindIndex((s => s.Equals("[[2]]"))) + 1;
+        var six = list.Select(json => json.ToJsonString()).ToList().FindIndex((s => s.Equals("[[6]]"))) + 1;
+
+        Console.WriteLine($"What is the decoder key for the distress signal? {two*six}");
 
         bool? IsGood(JsonArray left, JsonArray right)
         {
