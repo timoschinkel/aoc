@@ -33,15 +33,49 @@ class Program
         // the shortest paths to get from any non-zero valve to any other non-zero valve using BFS/DFS. This leads to a
         // new _graph_ where we always open the valve we visit. Since the data set is relatively small it is possible to
         // perform a "brute force" recursive solution to find the most efficient path.
-        
+        //
+        // Part 2; All aboard the brute force train! I tried to run the same algorithm as I used for part 1 with the 
+        // difference that I alternate you and the elephant depending on who can still move. That worked for the example
+        // input, but gave me a too low answer for the input. I gave up and updated the code for part 1 to keep a list
+        // of all the paths and their cumulative pressure. This runs in 20 minutes... but it does give the correct
+        // answer 🤷‍️
+
+        Dictionary<ImmutableList<string>, long> paths = new();
+
         timer.Start();
         CalculateShortestPaths();
-        long maximumPressure = FindMaximumPressure(30, "AA", ImmutableList<string>.Empty);
+        long maximumPressure = FindMaximumPressure(30, "AA", ImmutableList<string>.Empty.Add("AA"));
         timer.Stop();
         
         Console.WriteLine($"What is the most pressure you can release? {maximumPressure} ({timer.ElapsedMilliseconds}ms)");
 
-        long FindMaximumPressure(int minutesLeft, string current, ImmutableList<string> open)
+        timer.Restart();
+        
+        paths.Clear();
+        FindMaximumPressure(26, "AA", ImmutableList<string>.Empty);
+        
+        // paths now contains all possible paths, let's try to find the most optimal combination.
+        
+        int index = 0;
+        long max = 0;
+        foreach (var you in paths)
+        {
+            index++;
+            foreach (var elephant in paths.Skip(index))
+            {
+                // try to find non-intersecting paths
+                if (!you.Key.Intersect(elephant.Key).Any() && you.Value + elephant.Value > max)
+                {
+                    if (DEBUG) Console.WriteLine($"Found new optimal path. You: {String.Join(", ", you.Key)} ({you.Value}), Elephant: {String.Join(", ", elephant.Key)} ({elephant.Value}), Total: {you.Value + elephant.Value}");
+                    max = Math.Max(max, you.Value + elephant.Value);
+                }
+            }
+        }
+        timer.Stop();
+        
+        Console.WriteLine($"With you and an elephant working together for 26 minutes, what is the most pressure you could release? {max} ({timer.ElapsedMilliseconds}ms)");
+        
+        long FindMaximumPressure(int minutesLeft, string current, ImmutableList<string> open, long p = 0)
         {
             long best = 0;
             foreach (var entry in valves[current].ShortestRelevantPaths)
@@ -52,17 +86,24 @@ class Program
                 
                 if (newMinutesLeft > 0 && open.Contains(v) == false)
                 {
-                    long pressure = newMinutesLeft * valves[v].FlowRate + FindMaximumPressure(newMinutesLeft, v, open.Add(v));
+                    var newOpenValves = open.Add(v);
+                    long pressure = newMinutesLeft * valves[v].FlowRate + FindMaximumPressure(newMinutesLeft, v, newOpenValves, p + newMinutesLeft * valves[v].FlowRate);
+                    
+                    paths[newOpenValves] = p + newMinutesLeft * valves[v].FlowRate;
                     if (pressure > best)
                     {
                         best = pressure;
                     }
                 }
+                else
+                {
+                    paths[open] = p;
+                }
             }
 
             return best;
         }
-        
+
         void CalculateShortestPaths()
         {
             foreach (var entry in valves)
