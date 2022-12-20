@@ -39,6 +39,13 @@ class Program
         // input, but gave me a too low answer for the input. I gave up and updated the code for part 1 to keep a list
         // of all the paths and their cumulative pressure. This runs in 20 minutes... but it does give the correct
         // answer 🤷‍️
+        //
+        // Post mortem; I was pointed to some optimizations in my approach for part 2. By checking the combined value
+        // first, we don't need to perform a (costly) list intersect operation. If we than also add a check to see if 
+        // the amount of combined opened valves is larger than the amount of non-zero valves we can drastically reduce 
+        // the execution time. Another suggestion is to order the paths descending on pressure, that would introduce the
+        // possibility of an early exit, but my experiment actually showed a slower time. Possibly the additional costs
+        // of ordering.
 
         Dictionary<ImmutableList<string>, long> paths = new();
 
@@ -55,6 +62,8 @@ class Program
         FindMaximumPressure(26, "AA", ImmutableList<string>.Empty);
         
         // paths now contains all possible paths, let's try to find the most optimal combination.
+
+        int relevant = valves.Where(v => v.Value.FlowRate > 0).Count();
         
         int index = 0;
         long max = 0;
@@ -63,8 +72,11 @@ class Program
             index++;
             foreach (var elephant in paths.Skip(index))
             {
+                if (you.Value + elephant.Value <= max) continue; // no need to check
+                if (you.Key.Count + elephant.Key.Count > relevant) continue; // no need to check
+                
                 // try to find non-intersecting paths
-                if (!you.Key.Intersect(elephant.Key).Any() && you.Value + elephant.Value > max)
+                if (!you.Key.Intersect(elephant.Key).Any())
                 {
                     if (DEBUG) Console.WriteLine($"Found new optimal path. You: {String.Join(", ", you.Key)} ({you.Value}), Elephant: {String.Join(", ", elephant.Key)} ({elephant.Value}), Total: {you.Value + elephant.Value}");
                     max = Math.Max(max, you.Value + elephant.Value);
