@@ -23,6 +23,12 @@ class Program
             numbers.Add((id, value: int.Parse(input[id])));
         }
         
+        // Part 1; "The list is circular, so moving a number off one end of the list wraps back around to the other end
+        // as if the ends were connected." A few tricks are needed to solve this; 
+        // - Apply the operation and perform a modulo (num of numbers - 1)
+        // - The modulo operation of C# is NOT a modulus, but a remainder
+        // - Because it is circular an additional action to loop around is needed to match the example
+        
         if (DEBUG) Console.WriteLine("Initial arrangement:");
         Print();
         
