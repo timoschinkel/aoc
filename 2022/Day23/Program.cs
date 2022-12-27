@@ -21,6 +21,10 @@ class Program
         // Part 1; The difficulty in this assignment in my opinion lies in the administration. How to properly start at
         // at a different direction for every subsequent step. My approach is to use the step counter as an indicator. I
         // resorted to some rather ugly nested set of if-statements, but it works.
+        //
+        // Part 2; Nice! I already added a conditional for when none of the elves moved. The "brute force" way; Change
+        // the for-loop into a while loop with a counter for the `round`. Add an if-statement when we reach round 10,
+        // but keep going until we break out of the `while`-loop. 1373ms is acceptable for me. 
         
         // Read input
         for (int y = 0; y < input.Length; y++)
@@ -37,9 +41,12 @@ class Program
         Print();
         
         timer.Start();
-        
-        for (int round = 0; round < 10; round++)
+
+        var round = -1;
+        while (true)
         {
+            round++;
+            
             Dictionary<(int x, int y), (int x, int y)> proposals = new();
             Dictionary<(int x, int y), int> proposalCounts = new();
 
@@ -137,26 +144,40 @@ class Program
                 elves[proposal] = '#';
             }
 
+            if (round == 9)
+            {
+                // After 10 rounds, calculate part 1
+                FinishPartOne();
+            }
+            
             Print();
         }
-        
+
         Print(true);
         
-        // Find bounding boxes
-        int maxx = Int32.MinValue, minx = Int32.MaxValue, maxy = Int32.MinValue, miny = Int32.MaxValue;
-        foreach (var entry in elves)
-        {
-            maxx = Math.Max(maxx, entry.Key.x);
-            minx = Math.Min(minx, entry.Key.x);
-            maxy = Math.Max(maxy, entry.Key.y);
-            miny = Math.Min(miny, entry.Key.y);
-        }
-        
-        var region = (maxx - minx + 1) * (maxy - miny + 1);
-        var numOfEmpty = region - elves.Count;
+        if (round < 9) FinishPartOne(); // In case we don't get to 10 rounds, like the simple example
+
         timer.Stop();
+        Console.WriteLine($"What is the number of the first round where no Elf moves? {round + 1} ({timer.ElapsedMilliseconds}ms)");
         
-        Console.WriteLine($"How many empty ground tiles does that rectangle contain? {numOfEmpty} ({timer.ElapsedMilliseconds}ms)");
+        void FinishPartOne()
+        {
+            // Find bounding boxes
+            int maxx = Int32.MinValue, minx = Int32.MaxValue, maxy = Int32.MinValue, miny = Int32.MaxValue;
+            foreach (var entry in elves)
+            {
+                maxx = Math.Max(maxx, entry.Key.x);
+                minx = Math.Min(minx, entry.Key.x);
+                maxy = Math.Max(maxy, entry.Key.y);
+                miny = Math.Min(miny, entry.Key.y);
+            }
+        
+            var region = (maxx - minx + 1) * (maxy - miny + 1);
+            var numOfEmpty = region - elves.Count;
+            //timer.Stop();
+        
+            Console.WriteLine($"How many empty ground tiles does that rectangle contain? {numOfEmpty} ({timer.ElapsedMilliseconds}ms)");
+        }
         
         List<(int x, int y)> GetNeighbors((int x, int y) position)
         {
