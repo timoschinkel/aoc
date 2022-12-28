@@ -20,6 +20,9 @@ class Program
         // of BFS was not sufficient. After looking at some more in depth explanations I was able to wrap my head around
         // the idea that I don't need to keep a list of best scores for every position. The characteristic of BFS is
         // that once we reach the end point, we know that we have done so in the minimum required number of steps.
+        //
+        // Part 2; I wrapped my head around the idea of BFS and added two dimensions to my "visited" states. I struggled
+        // way too much with handling end conditions in the BFS. I resorted to a very verbose set of conditionals.
         
         // read input
         int width = input[0].Length, height = input.Length;
@@ -95,11 +98,13 @@ class Program
         // Perform a Breath First Search over three dimensions; t, column and row. Every step we have five possible 
         // operations; move up, move right, move down, move left, or wait. We will continue performing this until the 
         // queue is empty or when we reach end.
-        Queue<(int t, int x, int y)> queue = new Queue<(int t, int x, int y)>();
-        Dictionary<(int t, int x, int y), bool> visited = new();
+        Queue<(int t, int x, int y, bool backForSnacks, bool snacksPickedUp)> queue = new ();
+        Dictionary<(int t, int x, int y, bool backForSnacks, bool snacksPickedUp), bool> visited = new();
         int steps = 0;
 
-        queue.Enqueue((t: 0, x: start.x, y: start.y));
+        bool backForSnacks = false; // for part 1
+        
+        queue.Enqueue((t: 0, x: start.x, y: start.y, backForSnacks: false, snacksPickedUp: false));
         while (queue.Count > 0)
         {
             var current = queue.Dequeue();
@@ -110,6 +115,42 @@ class Program
             }
 
             visited[current] = true;
+
+            // Check if we have reached the end. If so - because of BFS characteristics - we know that we have found the
+            // the shortest path from start to end.
+            if (current.x == end.x && current.y == end.y)
+            {
+                // If we went back for snacks AND have picked up the snacks, then we have completed our journey through
+                // the blizzards to find the answer. Set the number of steps it took to get here in `steps` and break
+                // out of the while loop.
+                if (current.snacksPickedUp && current.backForSnacks)
+                {
+                    steps = current.t;
+                    break;
+                }
+
+                // If we reach the end for the first time we have the answer to part 1. So mark `backForSnacks` as true
+                // so we don't give the answer multiple times. Print the answer.
+                if (backForSnacks == false)
+                {
+                    FinishPartOne(current.t);
+                }
+
+                // Update the current move that we are going back for the snacks.
+                backForSnacks = true;
+                current = current with { backForSnacks = true };
+            }
+
+            // If we are at the start location, we need to check if we already have visited the end once. This is kept
+            // in current.backForSnacks. If that is the case we mark the following moves that we are once again on our
+            // way to the end.
+            if (current.x == start.x && current.y == start.y)
+            {
+                if (current.backForSnacks)
+                {
+                    current = current with { snacksPickedUp = true };
+                }
+            }
             
             // Check all possible directions
             var actions = new List<(int x, int y)>
@@ -118,20 +159,12 @@ class Program
                 (x: +1, y: 0), // right
                 (x: 0, y: +1), // down
                 (x: -1, y: 0), // left
-                (x: 0, y: 0), // wait
+                (x: 0, y: 0),  // wait
             };
-
-            // Check if we have reached the end. If so - because of BFS characteristics - we know that we have found the
-            // the shortest path from start to end.
-            if (current.x == end.x && current.y == end.y)
-            {
-                steps = current.t;
-                break;
-            }
             
             foreach (var action in actions)
             {
-                var move = (t: current.t + 1, x: current.x + action.x, y: current.y + action.y);
+                var move =  (t: current.t + 1, x: current.x + action.x, y: current.y + action.y, backForSnacks: current.backForSnacks, snacksPickedUp: current.snacksPickedUp );
                 if (CanMove(move.t, move.x, move.y))
                 {
                     queue.Enqueue(move);
@@ -140,8 +173,13 @@ class Program
         }
         
         timer.Stop();
-        Console.WriteLine($"What is the fewest number of minutes required to avoid the blizzards and reach the goal? {steps} ({timer.ElapsedMilliseconds}ms)");
+        Console.WriteLine($"What is the fewest number of minutes required to reach the goal, go back to the start, then reach the goal again? {steps} ({timer.ElapsedMilliseconds}ms)");
 
+        void FinishPartOne(int minutes)
+        {
+            Console.WriteLine($"What is the fewest number of minutes required to avoid the blizzards and reach the goal? {minutes} ({timer.ElapsedMilliseconds}ms)");
+        }
+        
         bool CanMove(int t, int x, int y)
         {
             if (x < 0 || x > width - 1 || y < 0 || y > height - 1 || grid[x, y] == '#') return false; // out of bounds
@@ -178,7 +216,7 @@ class Program
         {
             if (!DEBUG) return;
 
-            Console.WriteLine($"== Blizzards at minute {t} ==");
+            Console.WriteLine($"== Blizzards at minute {t} ({t % lcm}) ==");
             for (int row = 0; row < height; row++)
             {
                 for (int column = 0; column < width; column++)
@@ -189,7 +227,7 @@ class Program
                         continue;
                     }
 
-                    var bs = states[t, column, row];
+                    var bs = states[t % lcm, column, row];
                     if (bs == null)
                     {
                         Console.Write('.');
