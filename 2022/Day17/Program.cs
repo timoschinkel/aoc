@@ -1,4 +1,5 @@
-﻿using System.Reflection;
+﻿using System.Diagnostics;
+using System.Reflection;
 
 namespace Day17;
 
@@ -13,17 +14,25 @@ class Program
             ? File.ReadAllLines($"{Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location)}/example.txt")
             : File.ReadAllLines($"{Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location)}/input.txt");
 
+        var timer = new Stopwatch();
+        
         // Part 1; Implement Tetris. That is basically it. If you have never implemented Tetris I recommend you watch
         // this great explanation from One Lone Coder: https://www.youtube.com/watch?v=8OK8_tHeCIA
         // Some remarks; No need to scan for line, which saves us a bunch. Another thing to consider is that we need
         // to count the height, so I have reverted the grid: upwards is higher y. I decided not to use a grid, but a
         // Dictionary. This should never really run out of limits. After that it is executing the instructions in the 
         // correct order. I have deliberately made the code extra verbose by using methods.
+        //
+        // Part 2; Pattern finding. We start with a flat surface, and I don't know what the consequences of this are. I
+        // opted to create a pattern for 50 rows starting at rock 2022 - which we need to calculate anyway. I keep
+        // dropping rocks until I match the pattern. At this point we can calculate the number of repetitions of the 
+        // pattern, and the height gain per repetition. We only need to drop the remaining rocks to meet the target
+        // number of rocks.
         
         int width = 7;
 
         Dictionary<(int x, long y), bool> field = new();
-        int height = 0;
+        long height = 0;
 
         string jets = input.First();
         int[][,] rocks = new int[5][,]
@@ -65,40 +74,74 @@ class Program
             },
         };
 
+        timer.Start();
+        
         int jetIndex = 0;
-        for (var rock = 0; rock < 2022; rock++)
-        {
-            //Console.WriteLine("A new rock begins falling:");
-            
-            // Drop rock
-            int x = 2, // bottom left of block 
-                y = height + 3;
-            
-            //Print(rock);
+        string patternAt2022 = "";
+        long heightAt2022 = 0;
 
+        long repetitions = 0, heightGain = 0;
+        
+        long target = 1000000000000;
+        for (long rock = 0; rock < target; rock++)
+        {
+            // Drop rock
+            int x = 2; // bottom left of block 
+            long y = height + 3;
+            
             var tetromino = rocks[rock % rocks.Length];
-            
             ApplyJet();
-            
-            //Print(rock);
             
             while (CanMove(0, -1)) // moving down is decreasing y
             {
-                //Console.WriteLine("Rock falls 1 unit:");
                 // Drop
                 Move(0, -1);
-                //Console.WriteLine($"(x, y): ({x}, {y})");
                 //Print(rock);
                 ApplyJet();
-                //Print(rock);
             }
             
             // We can no longer drop, lock in place
             //Console.WriteLine("Rock falls 1 unit, causing it to come to rest:");
             LockInPlace();
-            Print(rock);
 
             height = Math.Max(height, y + HeightOfRock());
+
+            if (rock == 2021)
+            {
+                // Once we reach the 2022th rock, we can finish part one.
+                FinishPartOne();
+                
+                // We can now create a pattern of the last 50 rows. 50 is an arbitrary number, but it worked, so why
+                // change it. Maybe using the LCM of the length of the jets and the number of blocks works as well.
+                // I create a string pattern and store it. After this we continue dropping rocks until we find a match.
+                patternAt2022 = GetPatternFromHeight(height - 1, 50);
+                heightAt2022 = height;
+                continue;
+            }
+            else if (rock > 2021 && repetitions == 0)
+            {
+                // Check if the pattern matches that of that at rock 2022
+                string pattern = GetPatternFromHeight(height - 1, 50);
+
+                if (pattern == patternAt2022)
+                {
+                    // We have found a pattern of size 50! Now we can calculate the amount of repetitions we can see
+                    // until we reach the target. We do this by a integer division. The modulo is the number of rocks
+                    // we need to drop to get towards the target. I store the number of repetitions, together with the
+                    // height gain per repetition. We update `rock` so we only perform the last required number of rock
+                    // drops.
+                    
+                    long rockGain = rock - 2021;
+                    heightGain = height - heightAt2022;
+                    if (DEBUG) Console.WriteLine($"Match found at rock {rock + 1}! Every {rockGain} rocks we gain {heightGain} height.");
+                    
+                    repetitions = (target - rock) / rockGain;
+                    long rocksLeft = (target - rock) % rockGain;
+                    if (DEBUG) Console.WriteLine($"We will still have {target} - {rock} / {rockGain} = {repetitions} left, and then we still need to drop {rocksLeft} rocks");
+                    
+                    rock = target - rocksLeft;
+                }
+            }
 
             bool CanMove(int dx, int dy)
             {
@@ -140,12 +183,7 @@ class Program
                     if (CanMove(+1, 0))
                     {
                         // Move right
-                        //Console.WriteLine("Jet of gas pushes rock right:");
                         Move(+1, 0);
-                    }
-                    else
-                    {
-                        //Console.WriteLine("Jet of gas pushes rock right, but nothing happens:");
                     }
                 }
 
@@ -154,12 +192,7 @@ class Program
                     if (CanMove(-1, 0))
                     {
                         // Move left
-                        //Console.WriteLine("Jet of gas pushes rock left:");
                         Move(-1, 0);    
-                    }
-                    else
-                    {
-                        //Console.WriteLine("Jet of gas pushes rock left, but nothing happens:");
                     }
                 }
                 
@@ -222,7 +255,28 @@ class Program
                 Console.WriteLine("");
             }
         }
+
+        long finalHeight = height + (repetitions * heightGain);
         
-        Console.WriteLine($"How many units tall will the tower of rocks be after 2022 rocks have stopped falling? {height}");
+        timer.Stop();
+        Console.WriteLine($"How many units tall will the tower of rocks be after {target} rocks have stopped falling? {finalHeight} ({timer.ElapsedMilliseconds}ms)");
+
+        string GetPatternFromHeight(long h, int length)
+        {
+            string pattern = "";
+            for (var y = h; y > h - length; y--)
+            {
+                for (var x = 0; x < width; x++)
+                {
+                    pattern += field.ContainsKey((x: x, y: y)) ? '1': '0';
+                }
+            }
+            return pattern;
+        }
+
+        void FinishPartOne()
+        {
+            Console.WriteLine($"How many units tall will the tower of rocks be after 2022 rocks have stopped falling? {height} ({timer.ElapsedMilliseconds}ms)");       
+        }
     }
 }
