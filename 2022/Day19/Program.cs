@@ -20,6 +20,17 @@ class Program
         
         // Part 1; I have opted for a Depth First Search, where I try to limit the search paths. I only managed to do
         // partially. This solution is NOT fast, but it got me my star.
+        //
+        // Part 2; My approach from part 1 did not yield the correct answer, even after 45 minutes. This means I did not 
+        // only need to limit the search paths, I also had to fix my solution. I looked at suggestions on Reddit about
+        // how to limit the search paths and was greatly helped by https://www.reddit.com/r/adventofcode/comments/1013uxm/comment/j2loh3e/
+        // The approach is as follows; Because every minute we can build at maximum one robot we can step from robot
+        // build to robot build, instead of from minute to minute. So for every iteration - item on the queue - I
+        // iterate over the robots and calculate how much time it will take in the current configuration to accumulate
+        // enough resources to build that robot. This was still not fast enough, but the same Reddit post gave extra
+        // options about reducing the search paths; If we cannot build the robot before the time limit ends, we don't
+        // need to explore that possibility, and if we already have enough resources to build any robot, we don't need
+        // to build a robot either. That last optimization was any idea I got from bartvanraaij.
 
         // Read input
         var blueprints = input
@@ -46,16 +57,29 @@ class Program
         int score = 0;
         foreach (var blueprint in blueprints)
         {
-            var numberOfGeodes = GetMaximumNumberOfGeodes(blueprint);
+            var numberOfGeodes = GetMaximumNumberOfGeodes(blueprint, 24);
             var qualityLevel = blueprint.Id * numberOfGeodes;
             if (DEBUG) Console.WriteLine($"Maximum number of geodes for blueprint {blueprint.Id}: {numberOfGeodes} for quality level {qualityLevel}");
             score += qualityLevel;
         }
-        
+
         timer.Stop();
         Console.WriteLine($"What do you get if you add up the quality level of all of the blueprints in your list? {score} ({timer.ElapsedMilliseconds}ms)");
+        
+        // Part 2
+        timer.Start();
+        int partTwo = 1;
+        foreach (var blueprint in blueprints.Take(3))
+        {
+            if (DEBUG) Console.WriteLine($"Searching max geode for blueprint {blueprint.Id}");
+            var numberOfGeodes = GetMaximumNumberOfGeodes(blueprint, 32);
+            if (DEBUG) Console.WriteLine($"Maximum number of geodes for blueprint {blueprint.Id}: {numberOfGeodes}");
+            partTwo *= numberOfGeodes;
+        }
+        timer.Stop();
+        Console.WriteLine($"What do you get if you multiply these numbers together? {partTwo} ({timer.ElapsedMilliseconds}ms)");
 
-        int GetMaximumNumberOfGeodes(Blueprint blueprint)
+        int GetMaximumNumberOfGeodes(Blueprint blueprint, int minutes)
         {
             // Attempt DFS
             Stack<(int minutes, int ore, int clay, int obsidian, int geode, int oreRobots, int clayRobots, int obsidianRobots, int geodeRobots, string actions)> stack = new ();
@@ -66,163 +90,129 @@ class Program
             {
                 var current = stack.Pop();
                 
-                var minutesLeft = 25 - current.minutes;
-                
-                if (current.minutes >= 24)
-                {
-                    if (numberOfGeodes < current.geode)
-                    {
-                        if (DEBUG) Console.WriteLine($"Found a new maximum number of geode: {current.geode}, {stack.Count} items left on stack");
-                        //if (DEBUG) Console.WriteLine(current.actions);
-                        numberOfGeodes = current.geode;
-                    }
-                    continue;
-                }
-                
-                // Determine the maximum amount of geode we can possibly get, given that we build a new geode robot
-                // every minute from now on. That is a very broad condition, but for now it works.
-                var projected = current.geode + BinomialCoefficient(current.geodeRobots + minutesLeft - 1);
-                if (projected < numberOfGeodes)
-                {
-                    continue;
-                }
+                var minutesLeft = minutes - current.minutes;
 
-                current = current with
+                // Given the current number of geode robots and the number of minutes left we can make a projection of
+                // the guaranteed number of geodes cracked. By setting the number of geodes we might be able to  discard
+                // more paths in a later stage. This however will also ensure the correct answer when the last robot is
+                // is not build in the second to last minute.
+                var guaranteed = current.geode + (current.geodeRobots * (minutes - current.minutes));
+                if (guaranteed > numberOfGeodes)
                 {
-                    minutes = current.minutes + 1,
-                    actions = (current.actions + "\n\n" + $"== Minute {current.minutes + 1} ==").Trim()
+                    if (DEBUG) Console.WriteLine($"Found a new projected maximum number of geode for blueprint {blueprint.Id} on minute {current.minutes}: {guaranteed}, {stack.Count} items left on stack");
+                    numberOfGeodes = guaranteed;
+                }
+                
+                if (current.geode > numberOfGeodes)
+                {
+                    if (DEBUG) Console.WriteLine($"Found a new maximum number of geode for blueprint {blueprint.Id} on minute {current.minutes}: {current.geode}, {stack.Count} items left on stack");
+                    numberOfGeodes = current.geode;
+                }
+                
+                if (current.minutes >= minutes)
+                {
+                    continue;
+                }
+                
+                List<(string name, int oreRobots, int clayRobots, int obsidianRobots, int geodeRobots, int oreCost, int clayCost, int obsidianCost)> robots = new()
+                {
+                    (name: "geode", oreRobots: 0, clayRobots: 0, obsidianRobots: 0, geodeRobots: 1, oreCost: blueprint.GeodeRobotOreCost, clayCost: 0, obsidianCost: blueprint.GeodeRobotObsidianCost), // Geode
+                    (name: "obsidian", oreRobots: 0, clayRobots: 0, obsidianRobots: 1, geodeRobots: 0, oreCost: blueprint.ObsidianRobotOreCost, clayCost: blueprint.ObsidianRobotClayCost, obsidianCost: 0), // Obsidian
+                    (name: "clay", oreRobots: 0, clayRobots: 1, obsidianRobots: 0, geodeRobots: 0, oreCost: blueprint.ClayRobotOreCost, clayCost: 0, obsidianCost: 0), // Clay
+                    (name: "ore", oreRobots: 1, clayRobots: 0, obsidianRobots: 0, geodeRobots: 0, oreCost: blueprint.OreRobotOreCost, clayCost: 0, obsidianCost: 0), // Ore
                 };
 
-                // check possible actions, favor creating geode robots. Because of the stack - as per the depth-first
-                // approach - the prioritization is reversed.
-                
-                // Don't build any robot, just collect resources
-                stack.Push(UpdateResources(current));
-                
-                // Test if we can build an Ore robot, but also check if we should build it; If we have enough ore to
-                // build any other robot, we don't need to build another ore robot. This is due to the limitation of 
-                // only being able to build one robot per minute.
-                if (current.ore >= blueprint.OreRobotOreCost && current.ore < blueprint.MaxOreForAnyRobot + 1)
+                foreach (var robot in robots)
                 {
-                    // Build ore-collecting robot, then gather yields from robots, and ony after that add the new robot.
-                    var c = current with
+                    // when can I build this robot?
+                    var mins = TimeToBuildRobot(current, robot);
+                    
+                    if (mins == int.MaxValue)
                     {
-                        ore = current.ore - blueprint.OreRobotOreCost,
-                        actions = current.actions + "\n" + $"Spend {blueprint.OreRobotOreCost} ore to start building a ore-collecting robot."
-                    };
-                    c = UpdateResources(c);
-                    stack.Push(c with
-                    {
-                        oreRobots = c.oreRobots + 1,
-                        actions = c.actions + "\n" + $"The new ore-collecting robot is ready; you now have {c.oreRobots + 1} of them."
-                    });
-                }
-                
-                // Test if we can build a Clay robot, but also check if we should build it; If we have enough clay to
-                // build any other robot, we don't need to build another clay robot. This is due to the limitation of 
-                // only being able to build one robot per minute.
-                if (current.ore >= blueprint.ClayRobotOreCost && current.clay < blueprint.MaxClayForAnyRobot + 1)
-                {
-                    // Build clay-collecting robot, then gather yields from robots, and ony after that add the new robot.
-                    var c = current with
-                    {
-                        ore = current.ore - blueprint.ClayRobotOreCost,
-                        actions = current.actions + "\n" + $"Spend {blueprint.ClayRobotOreCost} ore to start building a clay-collecting robot."
-                    };
-                    c = UpdateResources(c);
-                    stack.Push(c with
-                    {
-                        clayRobots = c.clayRobots + 1,
-                        actions = c.actions + "\n" + $"The new clay-collecting robot is ready; you now have {c.clayRobots + 1} of them."
-                    });
-                }
-                
-                // Test if we can build an Obsidian robot, but also check if we should build it; If we have enough
-                // obsidian to build any other robot, we don't need to build another obsidian robot. This is due to the
-                // limitation of only being able to build one robot per minute.
-                if (current.ore >= blueprint.ObsidianRobotOreCost && current.clay >= blueprint.ObsidianRobotClayCost && current.obsidian < blueprint.MaxObsidianForAnyRobot + 1)
-                {
-                    // Build obsidian-collecting robot, then gather yields from robots, and ony after that add the new robot.
-                    var c = current with
-                    {
-                        ore = current.ore - blueprint.ObsidianRobotOreCost,
-                        clay = current.clay - blueprint.ObsidianRobotClayCost,
-                        actions = current.actions + "\n" + $"Spend {blueprint.ObsidianRobotOreCost} ore and {blueprint.ObsidianRobotClayCost} clay to start building an obsidian-collecting robot."
-                    };
-                    c = UpdateResources(c);
-                    stack.Push(c with
-                    {
-                        obsidianRobots = c.obsidianRobots + 1,
-                        actions = c.actions + "\n" + $"The new obsidian-collecting robot is ready; you now have {c.obsidianRobots + 1} of them."
-                    });
-                }
-                
-                // Test if we can build a Geode robot. We always want to build a geode robot if we can!
-                if (current.ore >= blueprint.GeodeRobotOreCost && current.obsidian >= blueprint.GeodeRobotObsidianCost)
-                {
-                    // Build obsidian-collecting robot, then gather yields from robots, and ony after that add the new robot.
-                    var c = current with
-                    {
-                        ore = current.ore - blueprint.GeodeRobotOreCost,
-                        obsidian = current.obsidian - blueprint.GeodeRobotObsidianCost,
-                        actions = current.actions + "\n" + $"Spend {blueprint.GeodeRobotOreCost} ore and {blueprint.GeodeRobotObsidianCost} obsidian to start building a geode-collecting robot."
-                    };
-                    c = UpdateResources(c);
-                    stack.Push(c with
-                    {
-                        geodeRobots = c.geodeRobots + 1,
-                        actions = c.actions + "\n" + $"The new geode-collecting robot is ready; you now have {c.geodeRobots + 1} of them."
-                    });
-                }
-
-                (int minutes, int ore, int clay, int obsidian, int geode, int oreRobots, int clayRobots, int
-                    obsidianRobots, int geodeRobots, string actions) UpdateResources(
-                        (int minutes, int ore, int clay, int obsidian, int geode, int oreRobots, int clayRobots, int
-                            obsidianRobots, int geodeRobots, string actions) state)
-                {
-                    if (state.oreRobots > 0)
-                    {
-                        state = state with
-                        {
-                            ore = state.ore + state.oreRobots,
-                            actions = state.actions + "\n" + $"{state.oreRobots} ore-collecting robot(s) collects {state.oreRobots} ore; you now have {state.ore + state.oreRobots} ore."
-                        };
-                    }
-                    if (state.clayRobots > 0)
-                    {
-                        state = state with
-                        {
-                            clay = state.clay + state.clayRobots,
-                            actions = state.actions + "\n" + $"{state.clayRobots} clay-collecting robot(s) collects {state.clayRobots} clay; you now have {state.clay + state.clayRobots} clay."
-                        };
-                    }
-                    if (state.obsidianRobots > 0)
-                    {
-                        state = state with
-                        {
-                            obsidian = state.obsidian + state.obsidianRobots,
-                            actions = state.actions + "\n" + $"{state.obsidianRobots} obsidian-collecting robot(s) collects {state.obsidianRobots} obsidian; you now have {state.obsidian + state.obsidianRobots} obsidian."
-                        };
-                    }
-                    if (state.geodeRobots > 0)
-                    {
-                        state = state with
-                        {
-                            geode = state.geode + state.geodeRobots,
-                            actions = state.actions + "\n" + $"{state.geodeRobots} geode-collecting robot(s) collects {state.geodeRobots} geode; you now have {state.geode + state.geodeRobots} geode."
-                        };
+                        // we cannot build it with current set up
+                        continue;
                     }
 
-                    return state;
+                    if (mins > minutesLeft - 1)
+                    {
+                        // we cannot build this robot before the deadline
+                        continue;
+                    }
+
+                    // Exclude building robots we already have enough resources for.
+                    // I had to tweak this a bit; I started with + 1, but got a too low answer for part 2. I switched
+                    // to num of robots, which did not limit the search paths enough. + 2 yields the correct answer,
+                    // but I cannot explain why...
+                    if (current.ore > blueprint.MaxOreForAnyRobot + 2 && robot.oreRobots > 0) continue;
+                    if (current.clay > blueprint.MaxClayForAnyRobot + 2 && robot.clayRobots > 0) continue;
+                    if (current.obsidian > blueprint.MaxObsidianForAnyRobot + 2 && robot.obsidianRobots > 0) continue;
+                    
+                    // Let's build a robot!
+                    // We will build the robot in current.minutes + mins, but we will calculate for the next minute, 
+                    // which is why the next state is for current.minutes + mins + 1.
+                    var next = current with
+                    {
+                        minutes = current.minutes + mins + 1,
+                        
+                        ore = current.ore + (current.oreRobots * mins) - robot.oreCost + current.oreRobots,
+                        oreRobots = current.oreRobots + robot.oreRobots,
+                        
+                        clay = current.clay + (current.clayRobots * mins) - robot.clayCost + current.clayRobots,
+                        clayRobots = current.clayRobots + robot.clayRobots,
+                        
+                        obsidian = current.obsidian + (current.obsidianRobots * mins) - robot.obsidianCost + current.obsidianRobots,
+                        obsidianRobots = current.obsidianRobots + robot.obsidianRobots,
+                        
+                        geode = current.geode + (current.geodeRobots * mins) + current.geodeRobots,
+                        geodeRobots = current.geodeRobots + robot.geodeRobots,
+                        
+                        actions = (current.actions + "\n" + $"Build robot to mine {robot.name} at minute {current.minutes + mins + 1}").Trim()
+                    };
+
+                    stack.Push(next);
                 }
             }
             
             return numberOfGeodes;
         }
 
-        int BinomialCoefficient(int n)
+        int TimeToBuildRobot(
+            (int minutes, int ore, int clay, int obsidian, int geode, int oreRobots, int clayRobots, int obsidianRobots, int geodeRobots, string actions) current, 
+            (string name, int oreRobots, int clayRobots, int obsidianRobots, int geodeRobots, int oreCost, int clayCost, int obsidianCost) robot
+        )
         {
-            return (n * (n + 1)) / 2;
+            if (current.ore >= robot.oreCost && 
+                current.clay >= robot.clayCost &&
+                current.obsidian >= robot.obsidianCost)
+            {
+                return 0; // we can build it now!
+            }
+
+            if (robot.oreCost > 0 && robot.oreCost > current.ore && current.oreRobots == 0)
+            {
+                // We need ore, but don't have enough ore, not any ore producing robots, so we cannot build this robot
+                return int.MaxValue; // as a substitute for infinity
+            }
+            
+            if (robot.clayCost > 0 && robot.clayCost > current.clay && current.clayRobots == 0)
+            {
+                // We need clay, but don't have enough clay, not any clay producing robots, so we cannot build this robot
+                return int.MaxValue; // as a substitute for infinity
+            }
+            
+            if (robot.obsidianCost > 0 && robot.obsidianCost > current.obsidian && current.obsidianRobots == 0)
+            {
+                // We need obsidian, but don't have enough obsidian, not any obsidian producing robots, so we cannot build this robot
+                return int.MaxValue; // as a substitute for infinity
+            }
+            
+            // Okay, there is a moment somewhere in the future where we can build this robot.
+            int mins = 0;
+            if (robot.oreCost > 0 && robot.oreCost > current.ore) mins = Math.Max(mins, (int)Math.Ceiling((robot.oreCost - current.ore) / (double)current.oreRobots));
+            if (robot.clayCost > 0 && robot.clayCost > current.clay) mins = Math.Max(mins, (int)Math.Ceiling((robot.clayCost - current.clay) / (double)current.clayRobots));
+            if (robot.obsidianCost > 0 && robot.obsidianCost > current.obsidian) mins = Math.Max(mins, (int)Math.Ceiling((robot.obsidianCost - current.obsidian) / (double)current.obsidianRobots));
+
+            return mins;
         }
     }
 
