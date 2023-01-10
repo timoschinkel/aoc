@@ -50,6 +50,13 @@ if (DEBUG) echo $start->dump() . PHP_EOL;
  * ###B#C#B#D###                        (1,2)       (1,4)       (1,6)       (1,8)
  *   #A#D#C#A#                          (2,2)       (2,4)       (2,6)       (2,8)
  *   #########
+ *
+ * Part 2; Same approach, but with extra amphipods. I have opted to create a second State object and specify a height.
+ * With a number of adjustments in finding eligible positions.
+ *
+ * Post mortem; This solution is effectively a depth first search with some optimizations. Reddit suggests this is
+ * done more efficient using a proper Dijkstra or A* implementation. This requires a priority queue instead of a stack.
+ * I did not spend time to create an efficient priority queue in PHP.
  */
 
 // Part 1
@@ -128,6 +135,11 @@ $elapsedMilliseconds = round((hrtime(true) - $stopwatch)/1e+6, 0);
 echo "What is the least energy required to organize the amphipods? {$partOne} ({$elapsedMilliseconds}ms)" . PHP_EOL;
 
 // Part 2
+$startTwo = PartTwoState::fromInput($inputs);
+$stopwatch = hrtime(true);
+$partTwo = getLeastEnergyToOrganizeAmphipods($startTwo);
+$elapsedMilliseconds = round((hrtime(true) - $stopwatch)/1e+6, 0);
+echo "What is the least energy required to organize the amphipods? {$partTwo} ({$elapsedMilliseconds}ms)" . PHP_EOL;
 
 final class Stack
 {
@@ -155,10 +167,12 @@ final class Stack
     }
 }
 
-final class State
+class State
 {
     private array $reverse;
     private array $history = [];
+
+    protected $height = 2;
 
     public function __construct(
         private int $energy,
@@ -209,12 +223,39 @@ final class State
      */
     private function goIntoBurrow(string $amphipod, int $x): ?int
     {
-        if ($this->getFromIndex($x, 1) === null &&
-            ($this->getFromIndex($x, 2) === null || $this->getFromIndex($x, 2)[0] === $amphipod[0])) {
-            return $this->getFromIndex($x, 2) === null ? 2 : 1;
+        if ($this->getFromIndex($x, 1) !== null) {
+            return null; // The top spot is already taken
         }
 
-        return null;
+        for ($y = 2; $y <= $this->height; $y++) {
+            $neighbor = $this->getFromIndex($x, $y);
+            if ($neighbor === null) {
+                continue;
+            }
+
+            if ($neighbor[0] !== $amphipod[0]) {
+                return null; // wrong amphipod in this burrow
+            }
+
+            if ($this->isInCorrectPosition($neighbor)) {
+                return $y - 1;
+            } else {
+                return null;
+            }
+        }
+
+        // We've made it so far, y is now $this->height + 1:
+        return $y - 1;
+
+
+
+
+//        if ($this->getFromIndex($x, 1) === null &&
+//            ($this->getFromIndex($x, 2) === null || $this->getFromIndex($x, 2)[0] === $amphipod[0])) {
+//            return $this->getFromIndex($x, 2) === null ? 2 : 1;
+//        }
+//
+//        return null;
     }
 
     public function getEligiblePositions(string $amphipod): array
@@ -287,7 +328,7 @@ final class State
             }
         }
 
-        // Favor the shortest distance
+        // Favor the shortest distance over x
         usort($eligible, fn(array $one, array $another): int => abs($another['x'] - $ax) - abs($one['x'] - $ax));
 
         return $eligible;
@@ -304,7 +345,7 @@ final class State
         return true;
     }
 
-    private static function x(string $amphipod): int
+    protected static function x(string $amphipod): int
     {
         return match($amphipod[0]) {
             'A' => 2,
@@ -328,21 +369,17 @@ final class State
 
         // We're in the correct burrow
 
-        if ($y === 2) { // We are at the bottom or the burrow
+        if ($y === $this->height) { // We are at the bottom or the burrow
             $this->locked[] = $amphipod;
             return true;
         }
 
-        // Okay, we're in the "top" spot of a burrow, check "below"
-        $sibling = $amphipod[0] . ($amphipod[1] === '1' ? '2' : '1');
-        ['x' => $sx, 'y' => $sy] = $this->amphipods[$sibling];
-        if ($x !== $sx /* wrong burrow */ || $sy !== $y + 1 /* not below */) {
-            return false;
+        $neighbor = $this->getFromIndex($x, $y + 1);
+        if ($this->isInCorrectPosition($neighbor)) {
+            $this->locked[] = $amphipod;
+            return true;
         }
-
-        // We are apparently in a valid position
-        $this->locked[] = $amphipod;
-        return true;
+        return false;
     }
 
     public function history(): array { return $this->history; }
@@ -377,7 +414,7 @@ final class State
         };
     }
 
-    private function getFromIndex(int $x, int $y, ?string $default = null): ?string
+    protected function getFromIndex(int $x, int $y, ?string $default = null): ?string
     {
         return $this->reverse["{$x}x{$y}"] ?? $default;
     }
@@ -390,13 +427,15 @@ final class State
         $str .= '#############' . PHP_EOL;
         $str .= '#' . (join('', array_map(fn(int $x): string => $get($x, 0), range(0, 10)))) . '#' . PHP_EOL;
         $str .= "###{$get(2, 1)}#{$get(4, 1)}#{$get(6, 1)}#{$get(8, 1)}###" . PHP_EOL;
-        $str .= "  #{$get(2, 2)}#{$get(4, 2)}#{$get(6, 2)}#{$get(8, 2)}#" . PHP_EOL;
+        for ($y = 2; $y <= $this->height; $y++) {
+            $str .= "  #{$get(2, $y)}#{$get(4, $y)}#{$get(6, $y)}#{$get(8, $y)}#" . PHP_EOL;
+        }
         $str .= '  #########' . PHP_EOL;
 
         return $str;
     }
 
-    public static function fromInput(array $input): self
+    public static function fromInput(array $input): static
     {
         $A = 1; $B = 1; $C = 1; $D = 1;
         $amphipods = [];
@@ -410,6 +449,38 @@ final class State
         }
         ksort($amphipods);
 
-        return new self(0, $amphipods);
+        return new static(0, $amphipods);
+    }
+}
+
+final class PartTwoState extends State
+{
+    protected $height = 4;
+
+    public static function fromInput(array $input): static
+    {
+        // Insert additional rows
+        $input = array_merge(
+            array_slice($input, 0, 3),
+            [
+                '  #D#C#B#A#',
+                '  #D#B#A#C#',
+            ],
+            array_slice($input, 3)
+        );
+
+        $A = 1; $B = 1; $C = 1; $D = 1;
+        $amphipods = [];
+        for($y = 1; $y <= 4; $y++) {
+            for ($x = 2; $x <= 8; $x += 2) {
+                $amphipod = $input[$y + 1][$x + 1];
+                if ($amphipod !== '.') {
+                    $amphipods[$amphipod . $$amphipod++] = ['x' => $x, 'y' => $y];
+                }
+            }
+        }
+        ksort($amphipods);
+
+        return new static(0, $amphipods);
     }
 }
