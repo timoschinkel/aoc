@@ -18,3 +18,15 @@ const invalid = input.reduce((carry, line) => {
 
 console.log(`How many passwords are valid according to their policies? ${invalid} (${sw.elapsedMilliseconds()}ms)`);
 
+// Part 2
+// Similar approach as part 1. Parse and check the validity of the password for every line. Keep in mind that the passwords are 
+// one-base indexed.
+sw.start();
+const two = input.reduce((carry, line) => {
+    const [, min, max, search, password] = /^(?<min>[0-9]+)-(?<max>[0-9]+) (?<search>[a-z]+): (?<password>[a-z]+)$/s.exec(line);
+    const tokens = Array.from(password);
+    const valid = (tokens[min - 1] == search && tokens[max - 1] != search) || (tokens[min - 1] != search && tokens[max - 1] == search);
+    return carry + (valid ? 1 : 0)
+}, 0);
+
+console.log(`How many passwords are valid according to the new interpretation of the policies? ${two} (${sw.elapsedMilliseconds()}ms)`);
