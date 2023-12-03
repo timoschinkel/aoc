@@ -6,6 +6,7 @@ const debug: boolean = !!(process.env.DEBUG || false);
 const games = input.map((line) => parse(line));
 
 console.log('What is the sum of the IDs of those games?', part_one(games));
+console.log('What is the sum of the power of these sets?', part_two(games));
 
 function part_one(games: Game[]): number {
     /*
@@ -26,6 +27,30 @@ function part_one(games: Game[]): number {
         } else {
             log(`Game ${game.id} is impossible`);
         }
+    }
+
+    return sum;
+}
+
+function part_two(games: Game[]): number {
+    /*
+     * Proper parsing in part 1 is paying off. The minimum amount of balls needed is
+     * the maximum number of balls per color, per subset.
+     */
+    let sum = 0;
+
+    for (const game of games) {
+        const minimum = game.subsets.reduce(
+            (carry, subset) => ({
+                red: Math.max(carry.red, subset.red),
+                blue: Math.max(carry.blue, subset.blue),
+                green: Math.max(carry.green, subset.green),
+            }),
+            { red: 0, blue: 0, green: 0 }
+        );
+
+        sum += minimum.red * minimum.blue * minimum.green;
+        log(`Game ${game.id}: ${minimum.red * minimum.blue * minimum.green}`);
     }
 
     return sum;
