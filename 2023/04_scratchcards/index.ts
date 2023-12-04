@@ -6,6 +6,7 @@ const debug: boolean = !!(process.env.DEBUG || false);
 const cards = input.map((line) => parse(line));
 
 console.log('How many points are they worth in total?', part_one(cards));
+console.log('How many total scratchcards do you end up with?', part_two(cards));
 
 function part_one(cards: Card[]): number {
     /*
@@ -28,18 +29,44 @@ function part_one(cards: Card[]): number {
     return sum;
 }
 
+function part_two(cards: Card[]): number {
+    /*
+     * I head to read carefully to understand the problem. I altered the parsing
+     * to also include the card id and the number of copies of the card, defaulting
+     * to 1. Now iterate over the cards, determine the number of winners and add
+     * the number of copies of the current card to the following card; if you have 2
+     * copies of a card that wins 1 card, then you need to add a copy to the next card
+     * **for every copy of the current card**.
+     *
+     * Don't forget to not go out of bounds :)
+     */
+    for (const card of cards) {
+        const matches = intersect(card.winners, card.on_card);
+
+        for(let c = card.id; c < Math.min(card.id + matches.length, cards.length); c++) {
+            cards[c].count += card.count;
+        }
+    }
+
+    return cards.reduce((sum, card) => sum + card.count, 0);
+}
+
 type Card = {
     readonly winners: number[],
     readonly on_card: number[],
+    readonly id: number,
+    count: number,
 }
 
 function parse(str: string): Card {
-    const [_, numbers] = str.split(':');
+    const [head, numbers] = str.split(':');
     const [ winners, on_card ] = numbers.split('|');
 
     return {
         winners: winners.trim().split(/\s+/si).map((n) => parseInt(n.trim())),
         on_card: on_card.trim().split(/\s+/si).map((n) => parseInt(n.trim())),
+        id: parseInt(head.replace('Card ', '').trim()),
+        count: 1,
     }
 }
 
