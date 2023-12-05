@@ -17,8 +17,6 @@ function part_one(input: Input): number {
      * keep track of the current "seed", check every range to see if it falls within that range, and
      * "map". Afterwards we can take the minimum value of the ranges.
      */
-    let sum = 0;
-
     const outcome = input.seeds.map((seed) => {
         log('Calculating location for seed', seed);
         let current = seed;
@@ -27,7 +25,7 @@ function part_one(input: Input): number {
         Object.entries(input.mappings).forEach(([name, mapping]) => {
             // Iterate through the ranges
             for (const map of mapping) {
-                if (current >= map.source_start && current <= map.source_start + map.length) {
+                if (current >= map.source_start && current < map.source_start + map.length) {
                     current += map.destination_start - map.source_start;
 
                     break;
