@@ -6,6 +6,7 @@ const debug: boolean = !!(process.env.DEBUG || false);
 const i = parse(input);
 
 console.log('What is the lowest location number that corresponds to any of the initial seed numbers?', part_one(i));
+console.log('What is the lowest location number that corresponds to any of the initial seed numbers?', part_two(i));
 
 function part_one(input: Input): number {
     /*
@@ -42,6 +43,42 @@ function part_one(input: Input): number {
     });
 
     return Math.min(...outcome);
+}
+
+function part_two(input: Input): number {
+    /*
+     * Attempt 01; why not run the solution from part 1 for every value within the range.
+     */
+
+    let min = undefined;
+    for (let i = 0; i < input.seeds.length; i+= 2) {
+        log('NEXT RANGE');
+        for (let seed = input.seeds[i]; seed < input.seeds[i] + input.seeds[i + 1]; seed++) {
+            log('Calculating location for seed', seed);
+            let current = seed;
+
+            // Iterate through the maps
+            Object.entries(input.mappings).forEach(([name, mapping]) => {
+                // Iterate through the ranges
+                for (const map of mapping) {
+                    if (current >= map.source_start && current < map.source_start + map.length) {
+                        current += map.destination_start - map.source_start;
+
+                        break;
+                    }
+                }
+
+                log('Mapped', name, current);
+            });
+
+            log('Found location for seed', seed, current);
+            if (min === undefined || current < min) {
+                min = current;
+            }
+        }
+    }
+
+    return min;
 }
 
 type Map = {
