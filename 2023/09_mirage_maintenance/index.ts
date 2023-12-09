@@ -13,7 +13,7 @@ const rows = parse(input);
 
 {
     using sw = new Stopwatch('part two');
-    console.log('What are the new total winnings?', part_two());
+    console.log('What is the sum of these extrapolated values?', part_two(rows));
 }
 
 
@@ -38,8 +38,24 @@ function part_one(rows: number[][]): number {
     return rows.reduce((sum, row) => sum += solve(row), 0);
 }
 
-function part_two(): number {
-    return 0;
+function part_two(rows: number[][]): number {
+    /**
+     * My ass remains unbitten, for now 😅
+     * Take the solution of part one, but instead of adding the last item of the difference
+     * to the last item of the current row, we subtract the first item of the difference
+     * from the first item of the current row.
+     */
+    const solve = (row: number[]): number => {
+        // if all numbers are the same, the next step will be 0, so we can skip
+        // that step.
+        if (is_all_the_same(row)) {
+            return row[0] ?? 0;
+        }
+
+        return row[0] - solve(difference(row));
+    }
+
+    return rows.reduce((sum, row) => sum += solve(row), 0);
 }
 
 function parse(input: string[]): number[][] {
