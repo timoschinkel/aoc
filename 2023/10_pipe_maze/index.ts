@@ -6,6 +6,9 @@ const debug: boolean = !!(process.env.DEBUG || false);
 
 const maze = parse(input);
 
+// Scope "steps" here, so we can populate in part one, and read in part two
+const steps: Record<number, number> = {};
+
 {
     using sw = new Stopwatch('part one');
     console.log('How many steps along the loop does it take to get from the starting position to the point farthest from the starting position?', part_one(maze));
@@ -13,7 +16,7 @@ const maze = parse(input);
 
 {
     using sw = new Stopwatch('part two');
-    console.log('What are the new total winnings?', part_two());
+    console.log('How many tiles are enclosed by the loop?', part_two(maze));
 }
 
 
@@ -43,7 +46,7 @@ function part_one({ width, height, pipes }: Maze): number {
 
     // BFS
     const queue: number[] = [];
-    const steps: Record<number, number> = {};
+    // const steps: Record<number, number> = {};
 
     // find S
     const S = pipes.indexOf('S');
@@ -117,8 +120,65 @@ function part_one({ width, height, pipes }: Maze): number {
     return Math.max(...Object.values(steps));
 }
 
-function part_two(): number {
-    return 0;
+function part_two({ width, height, pipes }: Maze): number {
+    /**
+     * For the first time this year will I reuse the results of part one to solve
+     * part 2; the way part one is solved I have a dictionary with the steps to
+     * reach a position. Because I used a breadth-first approach this means that
+     * this dictionary contains all positions of the loop.
+     *
+     * I used the hints I found on Reddit on how to solve this; For every row I count
+     * the number of *north facing* pipes of the path I'm crossing. If I encounter a
+     * position that is not part of the path, and I have crossed an odd number of north
+     * facing pipes, then the position is inside the enclosed path.
+     *
+     * @see https://www.reddit.com/r/adventofcode/comments/18fgddy/2023_day_10_part_2_using_a_rendering_algorithm_to/
+     */
+
+    // Find out what pipe S is
+    const sPosition = parseInt(Object.entries(steps).find(([_index, s]) => s === 0)[0]);
+    const neighborPositions = Object.entries(steps).filter(([_index, s]) => s === 1).map(([index]) => parseInt(index));
+
+    const pipeAt = (pos: number, neighbors: number[]): string => {
+        const up = neighbors.filter(p => p === pos - width).length === 1;
+        const right = neighbors.filter(p => p === pos + 1).length === 1;
+        const down = neighbors.filter(p => p === pos + width).length === 1;
+        const left = neighbors.filter(p => p === pos - 1).length === 1;
+
+        if (up && down) return '|';
+        if (up && right) return 'L';
+        if (up && left) return 'J';
+        if (right && left) return '-';
+        if (down && right) return 'F';
+        if (down && left) return '7';
+
+        return '?';
+    }
+
+    const sPipe = pipeAt(sPosition, neighborPositions);
+    pipes[sPosition] = sPipe;
+
+    let sum = 0;
+    let inside = false;
+
+    for(let row = 0; row < height; row++) {
+        for (let column = 0; column < width; column++) {
+            const position = row * width + column;
+            if (position in steps) {
+                // switch "inside" when pipe is facing north
+                if (['|', 'J', 'L'].includes(pipes[position])) {
+                    inside = !inside;
+                }
+                continue;
+            }
+
+            if (inside) {
+                sum++;
+            }
+        }
+    }
+
+    return sum;
 }
 
 type Maze = {
