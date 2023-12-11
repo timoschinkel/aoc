@@ -13,7 +13,7 @@ const map = parse(input);
 
 {
     using sw = new Stopwatch('part two');
-    console.log('What are the new total winnings?', part_two());
+    console.log('What is the sum of these lengths?', part_two(map));
 }
 
 
@@ -85,8 +85,79 @@ function part_one(map: Map): number {
     return sum;
 }
 
-function part_two(): number {
-    return 0;
+function part_two(map: Map): number {
+    /**
+     * Instead of actually expanding the universe, which would become way too large, we
+     * can also keep track of all the rows and columns that were empty and needed expansion.
+     * If we use this information we can calculate the new column and row values for each
+     * galaxy.
+     */
+    const empty_rows: number[] = [];
+    const empty_columns: number[] = [];
+
+    for (let row = 0; row < map.height; row++) {
+        const is_empty = (row: string[]): boolean =>
+            row.filter(g => g !== '.').length === 0;
+
+        if (is_empty(map.galaxies[row])) {
+            empty_rows.push(row);
+        }
+    }
+
+    for(let col = 0; col < map.width; col++) {
+        const is_empty = (col: number): boolean =>
+            map.galaxies.map(row => row[col]).filter(g => g !== '.').length === 0;
+
+        if (is_empty(col)) {
+            empty_columns.push(col);
+        }
+    }
+
+    log('empty_rows', empty_rows);
+    log('empty_columns', empty_columns);
+
+    const expansion = 1000000;
+
+    // find all pairs
+    const galaxies: Point[] = [];
+    for (let row = 0; row < map.height; row++) {
+        for (let column = 0; column < map.width; column++) {
+            if (map.galaxies[row][column] === '#') {
+                galaxies.push({ row, column });
+            }
+        }
+    }
+
+    log(galaxies);
+
+    const expanded = galaxies.map((galaxy: Point): Point => {
+        const num_of_duplicate_columns = (column: number) => {
+            return empty_columns.filter(c => c < column).length * (expansion - 1);
+        }
+
+        const num_of_duplicate_rows = (row: number) => {
+            return empty_rows.filter(r => r < row).length * (expansion - 1);
+        }
+
+        return { row: galaxy.row + num_of_duplicate_rows(galaxy.row), column: galaxy.column + num_of_duplicate_columns(galaxy.column) }
+    });
+
+    log(expanded);
+
+    const manhattan = (one: Point, another: Point): number =>
+        Math.abs(one.column - another.column) + Math.abs(one.row - another.row);
+
+    // sum shortest paths using Manhattan distance
+    let sum = 0;
+    for (let g = 0; g < expanded.length; g++) {
+        for (let o = g + 1; o < expanded.length; o++) {
+            const m = manhattan(expanded[g], expanded[o]);
+            log('Shortest path from', expanded[g].column, 'x', expanded[g].row, 'to', expanded[o].column, 'x', expanded[o].row, m);
+            sum += m;
+        }
+    }
+
+    return sum;
 }
 
 type Point = {
