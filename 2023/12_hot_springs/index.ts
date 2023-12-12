@@ -13,9 +13,8 @@ const records = parse(input);
 
 {
     using sw = new Stopwatch('part two');
-    console.log('What are the new total winnings?', part_two());
+    console.log('what is the new sum of possible arrangement counts?', part_two());
 }
-
 
 function part_one(records: Input[]): number {
     /**
@@ -23,43 +22,75 @@ function part_one(records: Input[]): number {
      * with the groups description.
      *
      * I use recursion to generate all possible configurations.
+     *
+     * Attempt 2; I found advise on Reddit on leveraging dynamic programming.
+     * Using this allows part 1 to be computed in less than 60ms. I think we need
+     * to optimize for part 2 still.
+     *
+     * The trick is to reduce the number of possibilities. The moment we detect that a
+     * path is not feasible, we immediately jump out of the recursion.
+     *
+     * @see https://www.reddit.com/r/adventofcode/comments/18ghux0/comment/kd0npmi/?utm_source=reddit&utm_medium=web2x&context=3
      */
     let sum = 0;
 
-    const count_arrangements = (record: Input): number => {
-        const matches = (arrangement: string[]): boolean => {
-            const groups = arrangement.join('').split(/\.+/si).filter(group => group).map(group => group.length).join(',');
+    for (const record of records) {
+        const count_arrangements = (arrangement: string, groups: number[]): number => {
+            log('');
+            log('count_arrangements for', arrangement, groups.join(','));
 
-            //log('matches', arrangement.join(''), groups, "\t\t", record.groups.join(','));
-            return groups === record.groups.join(',');
-        }
-
-        // generate arrangments
-        const wildcard_positions = Object.entries(record.springs)
-            .filter(([_position, spring]) => spring === '?')
-            .map(([position, _]) => parseInt(position));
-
-        const arrangements = (springs: string[], wildcard_positions: number[]): number => {
-            // RECURSION!
-            if (wildcard_positions.length === 0) {
-                return matches(springs) ? 1 : 0;
+            if (arrangement.length === 0) {
+                log('No more arrangments left', groups.length);
+                return groups.length === 0 ? 1 : 0;
             }
 
-            // Potential optimization: can we preemptively verify if this path is valid? If not,
-            // we can stop the recursion.
+            if (groups.length === 0) {
+                log('No more groups', arrangement.indexOf('#'));
+                return arrangement.indexOf('#') === -1 ? 1 : 0;
+            }
 
-            const position = wildcard_positions[0];
-            return arrangements(springs.map((spring, index) => index === position ? '.' : spring), wildcard_positions.slice(1)) +
-                arrangements(springs.map((spring, index) => index === position ? '#' : spring), wildcard_positions.slice(1))
+            const minimum_length = groups.reduce((length, group) => length + group, groups.length - 1);
+            if (arrangement.length < minimum_length) {
+                log('arrangment is shorter that required', arrangement.length, minimum_length);
+                return 0;
+            }
+
+            // look at first char
+            const p = arrangement.charAt(0);
+            if (p === '.') {
+                // discard and continue
+                log('Found ., stripping of and continuing', arrangement.slice(1));
+                return count_arrangements(arrangement.slice(1), groups);
+            }
+
+            if (p === '#') {
+                // check if the next groups[0] - 1 chars are either `?` or `#`
+                // keep in mind that a group of 3 MUST be followed by either `?` or `.`
+                const group = arrangement.slice(0, groups[0]);
+                log('Found #, group:' , group, 'followed by', arrangement.charAt(groups[0]));
+                if (group.includes('.')) {
+                    log('group contains a ., so this path is not possible');
+                    return 0; // not possible
+                }
+
+
+                if (arrangement.charAt(groups[0]) === '#') {
+                    log('cannot create group as the group is followed by #, so not possible');
+                    return 0;
+                }
+
+                const wildcards = group.split('?').length - 1;
+                log('This path is possible, number of ? in group:', wildcards, 'incrementing with', (wildcards > 0 ? Math.pow(2, wildcards) : 0));
+                // this path is possible, remove group + following character and the group and continue
+                return count_arrangements(arrangement.slice(groups[0] + 1), groups.slice(1));
+            }
+
+            log('Found ?, so replacing with both # and .');
+            return count_arrangements('#' + arrangement.slice(1), groups) // replace with #
+                + count_arrangements('.' + arrangement.slice(1), groups); // replace with .
         }
 
-        return arrangements(record.springs, wildcard_positions);
-    }
-
-    for (const record of records) {
-        const num_of_arrangements = count_arrangements(record);
-        log(record.springs.join(''), record.groups.join(','), num_of_arrangements, 'arrangement' + (num_of_arrangements != 1 ? 's' : ''));
-        sum += num_of_arrangements;
+        sum += count_arrangements(record.springs.join(''), record.groups);
     }
 
     return sum;
