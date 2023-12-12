@@ -40,6 +40,12 @@ function part_one(records: Input[]): number {
             log('');
             log('count_arrangements for', arrangement, groups.join(','));
 
+            /**
+             * Analyze the arrangement from left to right. First we need to ensure that we get out of
+             * the recursion. The exit scenarios are either when the arrangement is an empty string,
+             * or when there are no groups left.
+             */
+
             if (arrangement.length === 0) {
                 log('No more arrangments left', groups.length);
                 return groups.length === 0 ? 1 : 0;
@@ -50,6 +56,8 @@ function part_one(records: Input[]): number {
                 return arrangement.indexOf('#') === -1 ? 1 : 0;
             }
 
+            // We can calculate the minimum length required to meet the group requirements.
+            // If `arrangments` is shorter we get out of this path with a 0
             const minimum_length = groups.reduce((length, group) => length + group, groups.length - 1);
             if (arrangement.length < minimum_length) {
                 log('arrangment is shorter that required', arrangement.length, minimum_length);
