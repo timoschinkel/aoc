@@ -5,6 +5,7 @@ const input = readFileSync(`${__dirname}/${process.argv[2] || 'example'}.txt`, {
 const debug: boolean = !!(process.env.DEBUG || false);
 
 const records = parse(input);
+const cache: Record<string, number> = {};
 
 {
     using sw = new Stopwatch('part one');
@@ -13,7 +14,7 @@ const records = parse(input);
 
 {
     using sw = new Stopwatch('part two');
-    console.log('what is the new sum of possible arrangement counts?', part_two());
+    console.log('what is the new sum of possible arrangement counts?', part_two(records));
 }
 
 function part_one(records: Input[]): number {
@@ -96,8 +97,98 @@ function part_one(records: Input[]): number {
     return sum;
 }
 
-function part_two(): number {
-    return 0;
+function part_two(records: Input[]): number {
+    /**
+     * The first attempt was to unfold the input and put the result in part_one(). Well, that did not
+     * work....
+     *
+     * I remembered a puzzle from a previous edition - I cannot find the exact puzzle - where a lot
+     * of the Python users received huge benefits from memoization. Reading through some posts on
+     * Reddit confirmed my suspicion.
+     *
+     * Memoization makes that repeated combinations of arrangements and groups are stored in memory,
+     * preventing having to perform a lot of computations.
+     *
+     * I think there might be some more improvements to be made in the recursive function, but a solution
+     * within a second is fine with me.
+     */
+    const unfolded = records.map(({ springs, groups }) => ({
+        springs: [...springs, '?', ...springs, '?', ...springs, '?', ...springs, '?', ...springs],
+        groups: [...groups, ...groups, ...groups, ...groups, ...groups],
+    }));
+
+    let sum = 0;
+
+    for (const record of unfolded) {
+        const count_arrangements = (arrangement: string, groups: number[]): number => {
+            log('');
+            log('count_arrangements for', arrangement, groups.join(','));
+
+            const cache_key = arrangement + '-' + groups.join(',');
+            if (cache_key in cache) {
+                return cache[cache_key];
+            }
+
+            if (arrangement.length === 0) {
+                log('No more arrangments left', groups.length);
+                return groups.length === 0 ? 1 : 0;
+            }
+
+            if (groups.length === 0) {
+                log('No more groups', arrangement.indexOf('#'));
+                return arrangement.indexOf('#') === -1 ? 1 : 0;
+            }
+
+            const minimum_length = groups.reduce((length, group) => length + group, groups.length - 1);
+            if (arrangement.length < minimum_length) {
+                log('arrangment is shorter that required', arrangement.length, minimum_length);
+                return 0;
+            }
+
+            // look at first char
+            const p = arrangement.charAt(0);
+            if (p === '.') {
+                // discard and continue
+                log('Found ., stripping of and continuing', arrangement.slice(1));
+                cache[cache_key] = count_arrangements(arrangement.slice(1), groups);
+                return cache[cache_key];
+            }
+
+            if (p === '#') {
+                // check if the next groups[0] - 1 chars are either `?` or `#`
+                // keep in mind that a group of 3 MUST be followed by either `?` or `.`
+                const group = arrangement.slice(0, groups[0]);
+                log('Found #, group:' , group, 'followed by', arrangement.charAt(groups[0]));
+                if (group.includes('.')) {
+                    log('group contains a ., so this path is not possible');
+                    cache[cache_key] = 0;
+                    return 0; // not possible
+                }
+
+
+                if (arrangement.charAt(groups[0]) === '#') {
+                    log('cannot create group as the group is followed by #, so not possible');
+                    cache[cache_key] = 0;
+                    return 0;
+                }
+
+                const wildcards = group.split('?').length - 1;
+                log('This path is possible, number of ? in group:', wildcards, 'incrementing with', (wildcards > 0 ? Math.pow(2, wildcards) : 0));
+                // this path is possible, remove group + following character and the group and continue
+                cache[cache_key] = count_arrangements(arrangement.slice(groups[0] + 1), groups.slice(1));
+                return cache[cache_key];
+            }
+
+            log('Found ?, so replacing with both # and .');
+            cache[cache_key] = count_arrangements('#' + arrangement.slice(1), groups) // replace with #
+                + count_arrangements('.' + arrangement.slice(1), groups); // replace with .
+            return cache[cache_key];
+        }
+
+        sum += count_arrangements(record.springs.join(''), record.groups);
+    }
+
+    return sum;
 }
 
 type Input = {
