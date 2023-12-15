@@ -1,5 +1,7 @@
 import { readFileSync } from 'fs';
 import { Stopwatch } from '../stopwatch';
+import { dir } from 'console';
+import { argv } from 'process';
 
 const input = readFileSync(`${__dirname}/${process.argv[2] || 'example'}.txt`, { encoding:'utf8', flag:'r' }).trim().split("\n").map(line => line.trim());
 const debug: boolean = !!(process.env.DEBUG || false);
@@ -18,6 +20,24 @@ const steps: Record<number, number> = {};
     using sw = new Stopwatch('part two');
     console.log('How many tiles are enclosed by the loop?', part_two(maze));
 }
+
+{
+    using sw = new Stopwatch('part two alternative');
+    console.log('How many tiles are enclosed by the loop? (alternative approach)', part_two_alternative(maze));
+}
+
+// An alternative approach to consider; start at the most north-east corner
+// of the path. This will likely be an F. You now *know* that the inside of
+// the path is on the right, and the outside is on the left. We can now follow
+// the path - which we found in part 1 - clockwise. In case of an F we know
+// that if the outside was left, then the outside becomes up. We can apply
+// this logic for every step. For every step we look 1 step inwards; if we
+// see a pipe or . that is not part of our path, then we can put this on our
+// list of "inside positions". Once we have walked the entire path we iterate
+// over the list of "inside positions" and using a flood fill algorithm we
+// should be able to count the total number of inside positions.
+// This approach is inspired by a maze; if you keep the walls to one side you
+// should eventually always find the exit.
 
 
 function part_one({ width, height, pipes }: Maze): number {
@@ -181,6 +201,161 @@ function part_two({ width, height, pipes }: Maze): number {
     return sum;
 }
 
+function part_two_alternative(maze: Maze): number {
+    /**
+     * I kept on thinking about how to solve this, eventhough I already solved it using the
+     * Point in Polygon algorithm. This is an alternative approach I came up with, and it
+     * seems to be faster - although that might be due to opcode cache or something similar.
+     *
+     * We know the entire path - from part 1. From this path we can find the top-left position.
+     * Because it is the top-left corner, we know that this MUST be an F, and we know that
+     * left en above this point is the "outside" of the path. Now we can iterate over the entire
+     * path in a clockwise fashion. With every step we keep track of what is the inside and what
+     * is the outside. After every step I check the "inside" to see if there's a point that is
+     * not part of the path. If that is the case, then we add this position to the list of positions
+     * that we need to check. Something to keep in mind is that when we take a corner - F, J, 7 or
+     * L - we need to check the inside _before_ and _after_ we take the turn.
+     *
+     * One we are finished walking the entire path we have a list of positions that we need to
+     * check. These points are the inner border of the voids. Now we can apply a simple flood
+     * fill algorithm to find the rest of the positions inside the loop.
+     *
+     * Something cool: Add `visualize` to the call to output a visualization
+     */
+
+    // find top left item of path
+    let left_top = 0;
+    for (let col = 0; col < maze.width; col++) {
+        for (let row = 0; row < maze.height; row++) {
+            if ((row * maze.width + col) in steps) {
+                left_top = row * maze.width + col;
+                // break out of loop, old fashioned style
+                row = maze.height + 1;
+                col = maze.width + 1;
+            }
+        }
+    }
+
+    // Left-top MUST be F and we know that right below is the inside, let's walk
+    const to_check = [];
+
+    let inside = maze.width;
+    let direction = 1; // right
+
+    const inside_mutations = {
+        'L': {
+            [maze.width]: -1,
+            [maze.width * -1]: 1,
+            [1]: maze.width * -1,
+            [-1]: maze.width
+        },
+        'J': {
+            [maze.width]: 1,
+            [maze.width * -1]: -1,
+            [1]: maze.width,
+            [-1]: maze.width * -1
+        },
+        '7': {
+            [maze.width]: -1,
+            [maze.width * -1]: 1,
+            [1]: maze.width * -1,
+            [-1]: maze.width
+        },
+        'F': {
+            [maze.width]: 1,
+            [maze.width * -1]: -1,
+            [1]: maze.width,
+            [-1]: maze.width * -1
+        }
+    }
+
+    let iteration = 0;
+    let next = left_top + direction;
+    while (next != left_top) {
+        iteration++;
+        const current = next;
+
+        // for corners we need to check both the old and the new "inside"
+        let inside_for_corner: number;
+
+        switch (maze.pipes[current]) {
+            case '-':
+                next += direction; // continue going
+                break;
+            case '|':
+                next += direction; // continue going
+                break;
+            case '7':
+                direction = direction === 1 // we came from the left
+                    ? maze.width // we're going down
+                    : -1; // otherwise we came from below and we're going left
+                inside_for_corner = inside;
+                inside = inside_mutations[7][inside];
+                break;
+            case 'J':
+                direction = direction === 1 // we came from the left
+                    ? (maze.width * -1) // we're going up
+                    : -1; // otherwise we came from above and we're going left
+                inside_for_corner = inside;
+                inside = inside_mutations['J'][inside];
+                break;
+            case 'L':
+                direction = direction === -1 // we came from the right
+                    ? (maze.width * -1) // we're going up
+                    : 1; // otherwise we came from above and we're going right
+                inside_for_corner = inside;
+                inside = inside_mutations['L'][inside];
+                break;
+            case 'F':
+                direction = direction === -1 // we came from the right
+                    ? maze.width // we're going down
+                    : 1; // otherwise we came from below and we're going right
+                inside_for_corner = inside;
+                inside = inside_mutations['F'][inside];
+                break;
+        }
+
+        const target = current + inside;
+        if (target in steps === false && !to_check.includes(target)) {
+            to_check.push(target);
+        }
+
+        if (inside_for_corner) {
+            const target = current + inside_for_corner;
+            if (target in steps === false && !to_check.includes(target)) {
+                to_check.push(target);
+            }
+        }
+        next = current + direction;
+    }
+
+    // we now have a list of positions to check, let's implement
+    // a flood fill
+    log('starting flood fill', to_check.length, Object.keys(steps).length);
+
+    const filled = [];
+    const original_to_check = [ ...to_check ];
+    while (to_check.length > 0) {
+        const current = to_check.pop();
+        filled.push(current);
+
+        for (const direction of [maze.width * -1, 1, maze.width, -1]) {
+            const target = current + direction;
+            if (target in steps === false
+                && !to_check.includes(current + direction)
+                && !filled.includes(current + direction)) {
+                to_check.push(current + direction);
+            }
+        }
+    }
+
+    if (argv.includes('visualize')) {
+        visualize(maze, steps, original_to_check, filled);
+    }
+
+    return filled.length;
+}
+
 type Maze = {
     readonly width: number;
     readonly height: number;
@@ -210,5 +385,38 @@ function print(maze: Maze): void {
 
     for(let row = 0; row < maze.height; row++) {
         console.log(maze.pipes.slice(row * maze.width, row * maze.width + maze.width));
+    }
+}
+
+function visualize(maze: Maze, steps: Record<number, number>, to_check: number[], filled: number[]): void {
+    // https://en.m.wikipedia.org/wiki/ANSI_escape_code#Colors
+    const grey = (str: string): string => `\x1b[37m${str}\x1b[0m`;
+    const green = (str: string): string => `\x1b[32m${str}\x1b[0m`;
+    const cyan = (str: string): string => `\x1b[36m${str}\x1b[0m`;
+    const black = (str: string): string => `\x1b[30m${str}\x1b[0m`;
+
+    for (let row = 0; row < maze.height; row++) {
+        let r = '';
+        for (let col = 0; col < maze.width; col++) {
+            const pos = row * maze.width + col;
+
+            if (pos in steps) {
+                r += black({
+                    '|': '║',
+                    '-': '═',
+                    'J': '╝',
+                    'L': '╚',
+                    'F': '╔',
+                    '7': '╗',
+                }[maze.pipes[pos]]);
+            } else if (to_check.includes(pos)) {
+                r += green('█');
+            } else if (filled.includes(pos)) {
+                r += cyan('█');
+            } else {
+                r += grey('█');
+            }
+        }
+        console.log(r);
     }
 }
