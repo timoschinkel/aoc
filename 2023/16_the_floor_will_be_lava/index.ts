@@ -14,10 +14,10 @@ const contraption = parse(input);
 
 {
     using sw = new Stopwatch('part two');
-    console.log('What are the new total winnings?', part_two());
+    console.log('How many tiles are energized in that configuration?', part_two(contraption));
 }
 
-function part_one(contraption: Contraption): number {
+function part_one(contraption: Contraption, initial: Beam = null): number {
     /**
      * I struggled a bit too much with detecting the loops. I keep a dictionary
      * of energized positions. In that dictionary I keep track of the direction
@@ -38,7 +38,7 @@ function part_one(contraption: Contraption): number {
     const energized: Record<number, number> = {};
 
     const beams: Beam[] = [
-        {
+        initial || {
             id: '0',
             row: 0,
             column: -1, // start off grid
@@ -190,8 +190,29 @@ function part_one(contraption: Contraption): number {
     return Object.keys(energized).length;
 }
 
-function part_two(): number {
-    return 0;
+function part_two(contraption: Contraption): number {
+    /**
+     * I am not going to be smart about this; brute forcing all options "only" takes
+     * 500ms. Gold star, here I come!
+     */
+    let max = 0;
+    for (let r = 0; r < contraption.height; r++) {
+        max = Math.max(
+            max,
+            part_one(contraption, { id: '0', column: -1, row: r, direction: { row: 0, column: 1 }, completed: false }),
+            part_one(contraption, { id: '0', column: contraption.width, row: r, direction: { row: 0, column: -1 }, completed: false }),
+        )
+    }
+
+    for (let c = 0; c < contraption.width; c++) {
+        max = Math.max(
+            max,
+            part_one(contraption, { id: '0', column: c, row: -1, direction: { row: 1, column: 0 }, completed: false }),
+            part_one(contraption, { id: '0', column: c, row: contraption.height, direction: { row: -1, column: 0 }, completed: false }),
+        )
+    }
+
+    return max;
 }
 
 type Direction = {
