@@ -13,7 +13,7 @@ const digplans = parse(input);
 
 {
     using sw = new Stopwatch('part two');
-    console.log('What are the new total winnings?', part_two());
+    console.log('How many cubic meters of lava could the lagoon hold?', part_two(digplans));
 }
 
 
@@ -103,8 +103,90 @@ function part_one(digplans: DigPlan[]): number {
     return trenches.length - 1 + cnt;
 }
 
-function part_two(): number {
-    return 0;
+function part_two(digplans: DigPlan[]): number {
+    /**
+     * I solved part 1 as I did with Day 10, should be fast enough. Nopes!
+     *
+     * I had to digg into the internet for this; For day 10 I resorted to the
+     * Point in Polygon algorithm[1]. But the area is too big. For a moment
+     * I thought back to day 22 of 2011[2], and I considered splitting up the
+     * trenches into rectangles. But I remembered during the solving of day 10
+     * I read about something called the Shoelace formula[3], and some commenters
+     * on Reddit mentioned this approach. This approach works remarkably well.
+     * But there's still the problem of the border trenches; Shoelace calculates
+     * the area. For that I needed another algorithm called Pick's Theorem[4].
+     *
+     * I convert the digplan instructions, and calculate the corners of the
+     * lagoon. I take those corners and use Shoelace formula to calculate the area.
+     * I sum up all the borders and put that in Pick's theorem. Sounds simple,
+     * when you know how to do this...
+     *
+     * [1]: https://en.wikipedia.org/wiki/Point_in_polygon
+     * [2]: https://adventofcode.com/2021/day/22
+     * [3]: https://en.wikipedia.org/wiki/Shoelace_formula
+     * [4]: https://en.wikipedia.org/wiki/Pick%27s_theorem
+     */
+
+    const from_color = (color: string): DigPlan => {
+        const meters = color.substring(1, 6);
+        const direction = color.charAt(6);
+
+        const direction_mapping = {
+            '0': 'R',
+            '1': 'D',
+            '2': 'L',
+            '3': 'U',
+        }
+
+        return {
+            meters: parseInt(meters, 16),
+            direction: direction_mapping[direction],
+            color: '',
+        };
+    }
+
+    // Shoelace formula
+    // and Pick's theorem
+    let borders = 0;
+    const points: Position[] = [];
+    let current: Position = { row: 0, col: 0 };
+
+    for (const digplan of digplans) {
+        const { meters, direction } = from_color(digplan.color);
+
+        switch (direction) {
+            case 'U':
+                current = { row: current.row - meters, col: current.col };
+                break;
+            case 'D':
+                current = { row: current.row + meters, col: current.col };
+                break;
+            case 'L':
+                current = { row: current.row, col: current.col - meters };
+                break;
+            case 'R':
+                current = { row: current.row, col: current.col + meters };
+                break;
+            default:
+                throw new Error(`Wait, wut!? ${direction}`);
+        }
+        borders += meters;
+        points.push({ ...current });
+    }
+
+    // Apply shoelace formula
+    let shoelace_one = 0;
+    let shoelace_two = 0
+    for (let p = 0; p < points.length - 1; p++) {
+        // x0 - y1 + x1 - y0
+        shoelace_one += points[p].col * points[p + 1].row;
+        shoelace_two += points[p].row * points[p + 1].col;
+    }
+
+    const shoelace = Math.abs(shoelace_one - shoelace_two) / 2;
+
+    // Apply Pick's theorem
+    return shoelace + (borders / 2) + 1;
 }
 
 type Position = {
@@ -114,7 +196,7 @@ type Position = {
 
 type Edge = Position & {
     direction: string;
-    color: string;
+    color?: string;
 }
 
 type DigPlan = {
