@@ -13,7 +13,7 @@ const i = parse(input);
 
 {
     using sw = new Stopwatch('part two');
-    console.log('What are the new total winnings?', part_two());
+    console.log('How many distinct combinations of ratings will be accepted by the Elves\' workflows?', part_two(i));
 }
 
 
@@ -78,8 +78,110 @@ function part_one(i: Input): number {
     return sum;
 }
 
-function part_two(): number {
-    return 0;
+function part_two(i: Input): number {
+    /**
+     * Hello day 5 :wave:
+     *
+     * Effectively the same approach as day 5; we want to determine the ranges
+     * for which we either approach or reject. I start with a complete range
+     * with every rating having a range from 1 to 4000 including. We start with
+     * workflow 'in', and check the steps. For every step we split the range we
+     * received in two; the "inside" that meets the operation, and the "outside"
+     * that is left over. The next operation is applied to the "outside", until
+     * there are no operations left and the "outside" that is left is sent to the
+     * fallback. Perform this recursive until we have a range in R or A.
+     */
+    const start_ranges: Ranges = {
+        a: { s: 1, e: 4000 },
+        m: { s: 1, e: 4000 },
+        s: { s: 1, e: 4000 },
+        x: { s: 1, e: 4000 },
+    }
+
+    const count_combinations = (ranges: Ranges, wf: string, iterations: string[]): number => {
+        if (wf === 'R') {
+            return 0;
+        }
+
+        if (wf === 'A') {
+            // count number of permutations
+            log('ACCEPTED', 'iterations', iterations, ranges);
+            return (ranges.a.s - ranges.a.e - 1) * (ranges.m.s - ranges.m.e - 1) * (ranges.s.s - ranges.s.e - 1) * (ranges.x.s - ranges.x.e - 1)
+        }
+
+        const split = (r: Range, o: Operation): Range[] => {
+            if (o.op === '>') {
+                return [
+                    {
+                        s: Math.max(r.s, o.val + 1),
+                        e: r.e
+                    },
+                    // remainder:
+                    {
+                        s: r.s,
+                        e: Math.min(r.e, o.val),
+                    }
+                ];
+            } else { // <
+                return [
+                    {
+                        s: r.s,
+                        e: Math.min(r.e, o.val - 1),
+                    },
+                    // remainder:
+                    {
+                        s: Math.max(r.s, o.val),
+                        e: r.e
+                    }
+                ];
+            }
+        }
+
+        let remainder = { ...ranges };
+
+        let combs = 0;
+
+        const workflow = i.workflows[wf];
+        for (const operation of workflow.operations) {
+            // iterate over the operations, split up the range for each operation
+            const [inside, outside] = split(remainder[operation.prop], operation);
+
+            // Pass range to next workflow
+            combs += count_combinations({
+                a: operation.prop === 'a' ? inside : remainder.a,
+                m: operation.prop === 'm' ? inside : remainder.m,
+                s: operation.prop === 's' ? inside : remainder.s,
+                x: operation.prop === 'x' ? inside : remainder.x,
+            }, operation.target, [ ...iterations, wf ]);
+
+            // Calculate remainder
+            remainder = {
+                a: operation.prop === 'a' ? outside : remainder.a,
+                m: operation.prop === 'm' ? outside : remainder.m,
+                s: operation.prop === 's' ? outside : remainder.s,
+                x: operation.prop === 'x' ? outside : remainder.x,
+            }
+        }
+
+        // take what remained and let it be handled by fallback:
+        combs += count_combinations(remainder, workflow.fallback, [ ...iterations, wf ]);
+
+        return combs;
+    }
+
+    return count_combinations(start_ranges, 'in', []);
+}
+
+type Ranges = {
+    readonly a: Range;
+    readonly m: Range;
+    readonly s: Range;
+    readonly x: Range;
+}
+
+type Range = {
+    readonly s: number;
+    readonly e: number;
 }
 
 type Operation = {
