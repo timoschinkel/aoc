@@ -13,7 +13,7 @@ const forest = parse(input);
 
 {
     using sw = new Stopwatch('part two');
-    console.log('What are the new total winnings?', part_two());
+    console.log('How many steps long is the longest hike?', part_two(forest));
 }
 
 
@@ -139,8 +139,162 @@ function part_one(forest: Forest): number {
     return max_distance;
 }
 
-function part_two(): number {
-    return 0;
+function part_two({ width, height, trails }: Forest): number {
+    /**
+     * The same approach as part one did not work. In fact it runs out of memory.
+     * First I convert the forest to a graph using the junctions as nodes. Using that I
+     * first tried to perform DFS until I found the longest route, but that took
+     * a long, long time. I found some advise on Reddit[0] that suggested using
+     * recursion. That actually solves it relatively easy.
+     *
+     * I managed to bring down the speed a but further by taking out the start and
+     * end "nodes" out of the recursion; there's only one path from start to the next
+     * node, and the same goes for the end. So we take those out and add the distance
+     * to the initial recursive call.
+     *
+     * [0]: https://www.reddit.com/r/adventofcode/comments/18oy4pc/comment/keto0pc/
+     */
+
+    type Point = {
+        readonly col: number;
+        readonly row: number;
+    }
+
+    type Vertex = {
+        readonly start: string,
+        readonly end: string,
+        readonly distance: number;
+    }
+
+    // Find start and end, I take one step inwards. That way we are always within bounds
+    // and that saves us some out of bounds checks.
+    const start = { row: 1, col: trails[0].indexOf('.') };
+    const end = { row: height - 2, col: trails[height - 1].indexOf('.') };
+
+    const id = ({ row, col }: Point): number => row * width + col;
+
+    const state_as_string = ({ row, col }: Point): string => `${col}x${row}`;
+
+    const get = ({ row, col }: Point): string => trails[row]?.charAt(col) ?? '#';
+
+    const is_junction = ({ row, col }: Point): boolean => {
+        if (row <= 0 || row >= height - 1 || col <= 0 || col >= width - 1 || get({ row, col }) === '#') return false;
+
+        let exits = 0;
+
+        if (trails[row - 1].charAt(col) !== '#') exits++;
+        if (trails[row + 1].charAt(col) !== '#') exits++;
+        if (trails[row].charAt(col - 1) !== '#') exits++;
+        if (trails[row].charAt(col + 1) !== '#') exits++;
+
+        return exits > 2;
+    }
+
+    // Find all junctions
+    const junctions: Point[] = [];
+    for (let row = 0; row < height; row++) {
+        //let line = '';
+        const green = (str: string): string => `\x1b[42m${str}\x1b[0m`;
+
+        for (let col = 0; col < width; col++) {
+            if (is_junction({ row, col })) {
+                junctions.push({ row, col });
+                //line += green(get({ row, col }));
+            } else {
+                //line += get({ row, col });
+            }
+        }
+
+        //console.log(line);
+    }
+
+    // Create a graph
+    const graph: Record<string, Vertex[]> = {};
+
+    // There is only 1 path from start to next node, and from last node to end as well.
+    // We can take them out of our brute force:
+    let first_after_start;
+    let distance_to_first_after_start;
+    let last_before_end;
+    let distance_to_last_before_end;
+
+    for (const { row, col } of junctions) {
+
+        const equals = (one: Point, another: Point): boolean => one.row === another.row && one.col === another.col;
+
+        const walk_until_junction = (from: Point, direction: Point): Vertex => {
+            let previous = { ...from };
+            let current = { row: from.row + direction.row, col: from.col + direction.col };
+            let distance = 1;
+
+            while (is_junction(current) === false && equals(current, start) === false && equals(current, end) === false) {
+                if (!equals(previous, { row: current.row, col: current.col + 1 }) && get({ row: current.row, col: current.col + 1 }) !== '#') {
+                    previous = current;
+                    current = { row: current.row, col: current.col + 1 };
+                    distance++;
+                } else if (!equals(previous, { row: current.row + 1, col: current.col }) && get({ row: current.row + 1, col: current.col }) !== '#') {
+                    previous = current;
+                    current = { row: current.row + 1, col: current.col };
+                    distance++;
+                } else if (!equals(previous, { row: current.row, col: current.col - 1 }) && get({ row: current.row, col: current.col - 1 }) !== '#') {
+                    previous = current;
+                    current = { row: current.row, col: current.col - 1 };
+                    distance++;
+                } else if (!equals(previous, { row: current.row - 1, col: current.col }) && get({ row: current.row - 1, col: current.col }) !== '#') {
+                    previous = current;
+                    current = { row: current.row - 1, col: current.col };
+                    distance++;
+                } else {
+                    console.log('THIS SHOULD NOT HAPPEN!', current, start);
+                    process.exit(1);
+                }
+            }
+
+            return {
+                start: state_as_string(from),
+                end: state_as_string(current),
+                distance: distance + (equals(current, start) || equals(current, end) ? 1 : 0),
+            };
+        }
+
+        for (const d of [{row: 0, col: 1}, {row: 1, col: 0}, {row: 0, col: -1}, {row: -1, col: 0}]) {
+            if (get({ row: row + d.row, col: col + d.col}) !== '#') {
+                // walk until next junction
+                const vertex = walk_until_junction({ col, row }, d);
+
+                if (vertex.end === state_as_string(start)) {
+                    first_after_start = vertex.start;
+                    distance_to_first_after_start = vertex.distance;
+                } else if (vertex.end === state_as_string(end)) {
+                    last_before_end = vertex.start;
+                    distance_to_last_before_end = vertex.distance;
+                } else {
+                    graph[vertex.start] = [...(graph[vertex.start] ?? []), vertex];
+                }
+            }
+        }
+    }
+
+
+    // a recursive approach
+    const get_max = (graph: Record<string, Vertex[]>, start: string, end: string, visited: string[], distance: number): number => {
+        if (start === end) {
+            return distance;
+        }
+
+        visited = [ ...visited, start ];
+        let max = 0;
+        for (const vertex of graph[start]) {
+            if (visited.includes(vertex.end)) {
+                continue;
+            }
+            max = Math.max(max, get_max(graph, vertex.end, end, visited, distance + vertex.distance));
+        }
+
+        return max;
+    }
+
+    return get_max(graph, first_after_start, last_before_end, [], distance_to_first_after_start + distance_to_last_before_end);
 }
 
 type Forest = {
