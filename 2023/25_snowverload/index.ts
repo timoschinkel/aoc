@@ -9,7 +9,7 @@ const graph = parse(input);
 
 {
     using sw = new Stopwatch('part one');
-    console.log('What do you get if you multiply the sizes of these two groups together?', part_one(graph));
+    console.log('What do you get if you multiply the sizes of these two groups together?', part_one_karger(graph));
 }
 
 {
@@ -27,6 +27,9 @@ function part_one(graph: Graph): number {
      * find out what paths we traverse the most. Those should probably be the
      * paths the be cut. We remove these edges from the graph and count the number of
      * reachable nodes for each side.
+     *
+     * Possible optimizations:
+     * - Implement a min-cut algorithm
      */
     type Distance<T> = {
         readonly distance: number;
@@ -122,8 +125,134 @@ function part_one(graph: Graph): number {
     return count_reachable(graph, one) * count_reachable(graph, another);
 }
 
+function part_one_karger(graph: Graph): number {
+    /**
+     * A more optimized approach is to use Karger's algorithm[0]. This algorithm
+     * takes two random vertices and contracts/merges them. By running this algorithm
+     * a number of time the probability of finding the minimum cut should be close
+     * to 100%. In our scenario we already know that the minimum cut will be - 3 -,
+     * so we can change that part by not running a maximum amount of times, but to
+     * run it until we have a minimum cut cardinality of 3. By renaming the new
+     * vertices {left},{right} are we able to calculate the number of vertices one
+     * both sides of the minumum cut.
+     *
+     * This solution still is not very fast, but with a runtime of around 20 seconds
+     * it is considerably facter than the initial solution, which ran in approx 5
+     * minutes.
+     *
+     * [0]: https://en.wikipedia.org/wiki/Karger%27s_algorithm
+     */
+
+    // Convert into weighted graph
+    const G = Object.entries(graph).reduce((carry, [node, edges]) => {
+        return {
+            ...carry,
+            [node]: edges.map(destination => ({ destination, weight: 1 }))
+        }
+    }, {} as WeightedGraph);
+
+    type MinCut = {
+        readonly cardinality: number;
+        readonly left: string;
+        readonly right: string;
+    }
+
+    const karger = (g: WeightedGraph): MinCut => {
+        const merge = (one: string, another: string): void => {
+            /**    1                        1
+             * A - - - B                A - - - B
+             * |      /                 |
+             * | 1  / 1                 | 1
+             * |  /                     |
+             * C                        C
+             *
+             * merging A & B
+             *
+             * A,B                     A,B
+             *  |                       |
+             *  | 2                     | 1
+             *  |                       |
+             *  C                       C
+             *
+             * Add the weights when both vertices are connected
+             */
+            const from_one = [ ...g[one] ];            // B, C
+            const from_another = [ ...g[another] ];    // A, C
+
+            const vertex = `${one},${another}`; // A,B
+            const edges: Edge[] = [];
+
+            for (const n of from_one) {
+                if (n.destination === another) {
+                    continue;
+                }
+                const also_in_another = from_another.find(edge => edge.destination === n.destination);
+                if (also_in_another) {
+                    edges.push({ destination: n.destination, weight: n.weight + also_in_another.weight });
+                    g[n.destination] = g[n.destination].map(edge => edge.destination === one ? { destination: vertex, weight: edge.weight + also_in_another.weight } : edge);
+                } else {
+                    edges.push({ destination: n.destination, weight: n.weight });
+                    g[n.destination] = g[n.destination].map(edge => edge.destination === one ? { destination: vertex, weight: edge.weight } : edge);
+                }
+            }
+            delete g[one];
+
+            for (const n of from_another) {
+                if (n.destination === one) {
+                    continue;
+                }
+                const also_in_one = from_one.find(edge => edge.destination === n.destination);
+                if (also_in_one) {
+                    // it is connected to both, but we already handled this previous loop
+                    g[n.destination] = g[n.destination].filter(edge => edge.destination !== another);
+                } else {
+                    edges.push({ destination: n.destination, weight: n.weight });
+                    g[n.destination] = g[n.destination].map(edge => edge.destination === another ? { destination: vertex, weight: edge.weight } : edge);
+                }
+            }
+            delete g[another];
+
+            g[vertex] = edges;
+        }
+
+        try {
+            while (Object.keys(g).length > 2) {
+                // find a random vertex and merge it with a random neighboring vertex
+                const vertices = Object.keys(g);
+                const vertex = vertices[Math.floor(Math.random() * vertices.length)];
+                const neighbor = g[vertex][Math.floor(Math.random() * g[vertex].length)].destination;
+
+                merge(vertex, neighbor);
+            }
+        } catch (err) {
+            console.error(err);
+            console.log(g);
+        }
+
+        return { cardinality: g[Object.keys(g)[0]][0].weight, left: Object.keys(g)[0], right: Object.keys(g)[1] };
+    }
+
+    let mincut = karger({ ...G });
+    while (mincut.cardinality > 3) {
+        mincut = karger({ ...G });
+    }
+
+    log('mincut', mincut, mincut.left.split(',').length, mincut.right.split(',').length, mincut.left.split(',').length * mincut.right.split(',').length);
+
+    return mincut.left.split(',').length * mincut.right.split(',').length;
+}
+
 function part_two(): number {
     return 0;
+}
+
+type Edge = {
+    weight: number;
+    destination: string;
+}
+
+type WeightedGraph = {
+    [key: string]: Edge[];
 }
 
 type Graph = {
