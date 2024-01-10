@@ -6,6 +6,18 @@ const debug: boolean = !!(process.env.DEBUG || false);
 
 const slabs = parse(input);
 
+// Move this to global scope, se we can reuse the work of part one for part two
+const board: Record<string, string> = {};
+
+// a dictionary indexed by the supporting slab and what other slabs it is supporting
+const supports: Record<string, string[]> = {};
+
+// a dictionary indexed by the supported slab, and by what slabs it is being supported
+const is_supported_by: Record<string, string[]> = {};
+
+// can the block be desintegrated
+const desintegratable: Record<string, boolean> = {};
+
 {
     using sw = new Stopwatch('part one');
     console.log('How many bricks could be safely chosen as the one to get disintegrated?', part_one(slabs));
@@ -13,7 +25,7 @@ const slabs = parse(input);
 
 {
     using sw = new Stopwatch('part two');
-    console.log('What are the new total winnings?', part_two());
+    console.log('What is the sum of the number of other bricks that would fall?', part_two(slabs));
 }
 
 
@@ -38,8 +50,6 @@ function part_one(slabs: Slab[]): number {
      * [2]: https://www.reddit.com/r/adventofcode/comments/18obzrf/2023_day_22_falling_with_style/
      * [4]: https://www.reddit.com/r/adventofcode/comments/18oboe8/2023_day_22_part_1/
      */
-    const board: Record<string, string> = {};
-
     const can_drop = (slab: Slab): boolean => {
         const z = slab.from.z;
         if (z <= 1) {
@@ -59,14 +69,6 @@ function part_one(slabs: Slab[]): number {
 
     // sort slabs on z
     slabs.sort((one, another) => one.from.z - another.from.z);
-
-    // a dictionary indexed by the supporting slab and what other slabs it is supporting
-    const supports: Record<string, string[]> = {};
-
-    // a dictionary indexed by the supported slab, and by what slabs it is being supported
-    const is_supported_by: Record<string, string[]> = {};
-
-    const desintegratable: Record<string, boolean> = {};
 
     for (const slab of slabs) {
         // place slab tetris style and see if it gets blocked
@@ -111,8 +113,81 @@ function part_one(slabs: Slab[]): number {
     return Object.values(desintegratable).reduce((carry, value) => carry + (value ? 1 : 0), 0);
 }
 
-function part_two(): number {
-    return 0;
+function part_two(slabs: Slab[]): number {
+    /**
+     * Only when a slab cannot be safely removed do other blocks fall. That's why
+     * we use the result of part 1; we iterate over all slabs until we reach a slab
+     * that cannot be removed and we count the number of falling slabs if we remove
+     * it.
+     *
+     * Counting the number of falling slabs can be done recursively and I do so *per
+     * row*. Assume the following 2D representation:
+     * EEEE
+     * BBCC
+     *  AA
+     *
+     * Only slab A cannot be removed safely. We use our supporting index from part 1
+     * to find all the slabs that are supported by A - B and C. Next iteration we look
+     * what blocks are falling when we remove *both* B and C, knowing A has been removed.
+     * E only falls because all slabs that are supporting it have been removed. We
+     * continue this process row for row until we reach either the top, or we find
+     * ourselves in a situation where no slab from the row above will fall. We count the
+     * removed slabs - minus the original one - and return that.
+     *
+     * We can most likely optimize this by keeping track of what slabs were removed from
+     * a certain point and as such return early. I tried it, couldn't get it to work fast
+     * enough, and since the runtime is around 300ms I am fine with this solution.
+     */
+
+    const diff = (one: string[], another: string[]): string[] => {
+        return one.filter(item => !another.includes(item));
+    }
+
+    const count_falling = (slabs: string[], removed: string[]): number => {
+        const up = new Set<string>();
+        for (const slab of slabs) {
+            for (const above of (supports[slab] ?? [])) {
+                up.add(above);
+            }
+        }
+
+        if (slabs.length === 0) {
+            log('Reached the top of the pile', removed);
+            return new Set(removed).size - 1;
+        }
+
+        const will_fall = (s: string): boolean => {
+            // A slab will fall when all supporting slabs have been removed
+            return diff(is_supported_by[s], [...removed, ...slabs ]).length === 0;
+        }
+
+        let falling = 0;
+        const to_fall = new Set<string>();
+        for (const above of up) {
+            if (will_fall(above)) {
+                log('Slab', above, 'will fall');
+                to_fall.add(above);
+            }
+        }
+
+        return count_falling([ ...to_fall.values()], [ ...removed, ...slabs]);
+    }
+
+    let sum = 0;
+    for (const slab of slabs) {
+        if ((supports[slab.id] ?? []).length === 0 || desintegratable[slab.id]) {
+            // This slab does not support any other slabs, or it was already deemed
+            // desintegratable in part 1. Mark it zero (Dude), and continue to the
+            // next slab.
+            continue;
+        }
+
+        // walk "up" and count until we reach the top
+        log('Inspecting', slab.id);
+        sum += count_falling([slab.id], []);
+    }
+
+    return sum;
 }
 
 type Point = {
@@ -131,7 +206,7 @@ function parse(input: string[]): Slab[] {
     return input.map((line, index) => {
         const coords = line.split(/~|,/si).map(i => parseInt(i));
         return {
-            id: index.toString(), //String.fromCharCode(65 + index),
+            id: String.fromCharCode(65 + index),
             from: { x: coords[0], y: coords[1], z: coords[2] },
             to: { x: coords[3], y: coords[4], z: coords[5] }
         }
