@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+require_once dirname(__DIR__) . DIRECTORY_SEPARATOR . 'Stopwatch.php';
+
 $input = __DIR__ . DIRECTORY_SEPARATOR . ($argv[1] ?? 'example') . '.txt';
 
 $rows = array_filter(explode(PHP_EOL, file_get_contents($input)));
@@ -13,6 +15,8 @@ foreach ($rows as $row) {
     $one[] = $left;
     $two[] = $right;
 }
+
+$sw = new Stopwatch();
 
 function part_one(array $one, array $two): int {
     sort($one);
@@ -26,7 +30,8 @@ function part_one(array $one, array $two): int {
     return $difference;
 }
 
-echo 'What is the total distance between your lists? ' . part_one($one, $two) . PHP_EOL;
+$sw->start();
+echo 'What is the total distance between your lists? ' . part_one($one, $two) . ' (' . $sw->ellapsedMS() . 'ms)' . PHP_EOL;
 
 function part_two(array $one, array $two): int {
     $counts = array_count_values($two); // hail PHP!
@@ -39,4 +44,5 @@ function part_two(array $one, array $two): int {
     return $score;
 }
 
-echo 'What is their similarity score? ' . part_two($one, $two) . PHP_EOL;
+$sw->start();
+echo 'What is their similarity score? ' . part_two($one, $two) . ' (' . $sw->ellapsedMS() . 'ms)' . PHP_EOL;

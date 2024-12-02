@@ -2,9 +2,13 @@
 
 declare(strict_types=1);
 
+require_once dirname(__DIR__) . DIRECTORY_SEPARATOR . 'Stopwatch.php';
+
 $input = __DIR__ . DIRECTORY_SEPARATOR . ($argv[1] ?? 'example') . '.txt';
 
 $rows = array_filter(explode(PHP_EOL, file_get_contents($input)));
+
+$sw = new Stopwatch();
 
 $reports = array_map(fn(string $row): array => array_map('intval', preg_split('%\s+%', $row)), $rows);
 
@@ -20,7 +24,8 @@ function part_one(array $reports): int {
     return count(array_filter($reports, fn(array $report): bool => is_safe($report)));
 }
 
-echo 'How many reports are safe? ' . part_one($reports) . PHP_EOL;
+$sw->start();
+echo 'How many reports are safe? ' . part_one($reports) . ' (' . $sw->ellapsedMS() . 'ms)' . PHP_EOL;
 
 /*
  * What to keep in mind; if the report was valid in the fist step, then it is also valid in the second step. This means
@@ -31,7 +36,8 @@ function part_two(array $reports): int {
     return count(array_filter($reports, fn(array $report): bool => is_safe($report) || is_safe_with_dampener($report)));
 }
 
-echo 'How many reports are now safe? ' . part_two($reports) . PHP_EOL;
+$sw->start();
+echo 'How many reports are now safe? ' . part_two($reports) . ' (' . $sw->ellapsedMS() . 'ms)' . PHP_EOL;
 
 function is_safe(array $report): bool {
     $prev = $report[1] - $report[0];
