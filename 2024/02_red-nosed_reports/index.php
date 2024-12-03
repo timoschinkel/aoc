@@ -25,7 +25,7 @@ function part_one(array $reports): int {
 }
 
 $sw->start();
-echo 'How many reports are safe? ' . part_one($reports) . ' (' . $sw->ellapsedMS() . 'ms)' . PHP_EOL;
+echo 'How many reports are safe? ' . part_one($reports) . ' (' . $sw->ellapsed() . ')' . PHP_EOL;
 
 /*
  * What to keep in mind; if the report was valid in the fist step, then it is also valid in the second step. This means
@@ -47,7 +47,7 @@ function part_two_optimized(array $reports): int {
 }
 
 $sw->start();
-echo 'How many reports are now safe? ' . part_two_optimized($reports) . ' (' . $sw->ellapsedMS() . 'ms)' . PHP_EOL;
+echo 'How many reports are now safe? ' . part_two_optimized($reports) . ' (' . $sw->ellapsed() . ')' . PHP_EOL;
 
 function is_safe(array $report): bool {
     $prev = $report[1] - $report[0];

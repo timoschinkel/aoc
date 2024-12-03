@@ -31,7 +31,7 @@ function part_one(string $memory): int {
 }
 
 $sw->start();
-echo 'What do you get if you add up all of the results of the multiplications? ' . part_one($memory) . ' (' . $sw->ellapsedMS() . 'ms)' . PHP_EOL;
+echo 'What do you get if you add up all of the results of the multiplications? ' . part_one($memory) . ' (' . $sw->ellapsed() . ')' . PHP_EOL;
 
 /*
  * My first instinct was to remove all the memory between `don't()` and `do()`, and run the result via the part_one()
@@ -57,4 +57,4 @@ function part_two(string $memory): int {
 }
 
 $sw->start();
-echo 'What do you get if you add up all of the results of just the enabled multiplications? ' . part_two($memory) . ' (' . $sw->ellapsedMS() . 'ms)' . PHP_EOL;
+echo 'What do you get if you add up all of the results of just the enabled multiplications? ' . part_two($memory) . ' (' . $sw->ellapsed() . ')' . PHP_EOL;

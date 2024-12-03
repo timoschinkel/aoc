@@ -31,7 +31,7 @@ function part_one(array $one, array $two): int {
 }
 
 $sw->start();
-echo 'What is the total distance between your lists? ' . part_one($one, $two) . ' (' . $sw->ellapsedMS() . 'ms)' . PHP_EOL;
+echo 'What is the total distance between your lists? ' . part_one($one, $two) . ' (' . $sw->ellapsed() . ')' . PHP_EOL;
 
 function part_two(array $one, array $two): int {
     $counts = array_count_values($two); // hail PHP!
@@ -45,4 +45,4 @@ function part_two(array $one, array $two): int {
 }
 
 $sw->start();
-echo 'What is their similarity score? ' . part_two($one, $two) . ' (' . $sw->ellapsedMS() . 'ms)' . PHP_EOL;
+echo 'What is their similarity score? ' . part_two($one, $two) . ' (' . $sw->ellapsed() . ')' . PHP_EOL;
