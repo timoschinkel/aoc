@@ -16,7 +16,7 @@ class Stopwatch {
         $ellapsedNanoSeconds = hrtime(true) - $this->start;
 
         if ($ellapsedNanoSeconds > 1000000000) {
-            return "\e[31m" . ceil((hrtime(true) - $this->start) / 1000000000) . "s\e[0m";
+            return "\e[31m" . round((hrtime(true) - $this->start) / 1000000000, 2) . "s\e[0m";
         } elseif ($ellapsedNanoSeconds > 1000000) {
             return ceil((hrtime(true) - $this->start) / 1000000) . 'ms';
         } elseif ($ellapsedNanoSeconds > 1000) {
