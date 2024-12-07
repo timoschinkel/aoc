@@ -15,13 +15,16 @@ $sw = new Stopwatch();
  * I have opted for recursion for this puzzle. We need to determine if a certain row is valid, but we need to try
  * multiple operators. What made me opt for recursion is the line "Operators are always evaluated left-to-right, not
  * according to precedence rules".
+ *
+ * Optimization: The first iteration will always start with 0, making the multiplication useless. We can also already
+ * start with the first value, and remove this element from the remaining values. This almost halves the execution time.
  */
 function part_one(array $rows): int {
     $sum = 0;
     foreach ($rows as $row) {
         $parts = array_map('intval', preg_split('%:?\s+%', $row));
 
-        if (is_valid($parts[0], array_slice($parts, 1))) {
+        if (is_valid($parts[0], array_slice($parts, 2), $parts[1])) {
             $sum += $parts[0];
         }
     }
@@ -54,13 +57,16 @@ echo 'What is their total calibration result? ' . part_one($rows) . ' (' . $sw->
  * The exact same approach as part 1, only with a different implementation of the recursion. Again I found that my
  * intuition was wrong and having the most heavy operation last instead of first gave a better performance. This might
  * be caused by how PHP handles recursion.
+ *
+ * Optimization: the same optimization as part 1 - starting with the first value instead of with 0 -, but also another
+ * optimization that removes converting int values to a string.
  */
 function part_two(array $rows): int {
     $sum = 0;
     foreach ($rows as $row) {
         $parts = array_map('intval', preg_split('%:?\s+%', $row));
 
-        if (is_valid_part_two($parts[0], array_slice($parts, 1))) {
+        if (is_valid_part_two($parts[0], array_slice($parts, 2), $parts[1])) {
             $sum += $parts[0];
         }
     }
@@ -83,7 +89,18 @@ function is_valid_part_two (int $outcome, array $values, int $current = 0): bool
     return
         is_valid_part_two($outcome, $values, $current + $next)
         || is_valid_part_two($outcome, $values, $current * $next)
-        || is_valid_part_two($outcome, $values, intval((string)$current . (string)$next));
+        || is_valid_part_two($outcome, $values, concat($current, $next));
+}
+
+function concat (int $current, int $next): int {
+    if ($next < 10) return $current * 10 + $next;
+    if ($next < 100) return $current * 100 + $next;
+    if ($next < 1000) return $current * 1000 + $next;
+    if ($next < 10000) return $current * 10000 + $next;
+    if ($next < 100000) return $current * 100000 + $next;
+    if ($next < 1000000) return $current * 1000000 + $next;
+
+    return intval((string)$current . (string)$next);
 }
 
 $sw->start();
