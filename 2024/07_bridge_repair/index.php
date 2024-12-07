@@ -50,8 +50,52 @@ function is_valid (int $outcome, array $values, int $current = 0): bool {
     return is_valid($outcome, $values, $current + $next) || is_valid($outcome, $values, $current * $next);
 }
 
+//$sw->start();
+//echo 'What is their total calibration result? ' . part_one($rows) . ' (' . $sw->ellapsed() . ')' . PHP_EOL;
+
+/*
+ * I found this optimization on Reddit; the way to speed up this solution is to reduce the number of recursive branches
+ * that need to be evaluated. By starting with the first value instead of 0 we already trimmed a lot of branches
+ * improving performance with 50%, but if we work from right to left we can trim even more branches. One of the
+ * operators is multiplication, and the inverse of multiplication is division. If the current value does not divide to
+ * an integer value we can stop the entire branch. This drastically improves performance.
+ * This optimization is applicable to both part 1 and part 2.
+ */
+function part_one_optimized(array $rows): int {
+    $sum = 0;
+    foreach ($rows as $row) {
+        $parts = array_map('intval', preg_split('%:?\s+%', $row));
+
+        if (is_valid_optimized($parts[0], array_slice($parts, 1), $parts[0])) {
+            $sum += $parts[0];
+        }
+    }
+
+    return $sum;
+}
+
+function is_valid_optimized (int $outcome, array $values, int $current = 0): bool {
+    if ($current < 0) { // early exit
+        return false;
+    }
+
+    if (count($values) === 0) { // we've reached the end
+        return $current === 0;
+    }
+
+    $next = array_pop($values);
+
+    // RECURSION!
+    // NB. Since I'm trying to return as soon as possible I considered applying the operator that grows the fastest -
+    // the multiply operator - should be evaluated first. However, that actually made the execution time worse -
+    // from 48ms to 55ms.
+    return
+        ($current % $next === 0 ? is_valid_optimized($outcome, $values, intval($current / $next)) : false) ||
+        is_valid_optimized($outcome, $values, $current - $next);
+}
+
 $sw->start();
-echo 'What is their total calibration result? ' . part_one($rows) . ' (' . $sw->ellapsed() . ')' . PHP_EOL;
+echo 'What is their total calibration result? ' . part_one_optimized($rows) . ' (' . $sw->ellapsed() . ')' . PHP_EOL;
 
 /*
  * The exact same approach as part 1, only with a different implementation of the recursion. Again I found that my
@@ -103,5 +147,47 @@ function concat (int $current, int $next): int {
     return intval((string)$current . (string)$next);
 }
 
+//$sw->start();
+//echo 'What is their total calibration result? ' . part_two($rows) . ' (' . $sw->ellapsed() . ')' . PHP_EOL;
+
+function part_two_optimized(array $rows): int {
+    $sum = 0;
+    foreach ($rows as $row) {
+        $parts = array_map('intval', preg_split('%:?\s+%', $row));
+
+        if (is_valid_part_two_optimized($parts[0], array_slice($parts, 1), $parts[0])) {
+            $sum += $parts[0];
+        }
+    }
+
+    return $sum;
+}
+
+function is_valid_part_two_optimized (int $outcome, array $values, int $current = 0): bool {
+    if ($current < 0) { // early exit
+        return false;
+    }
+
+    if (count($values) === 0) { // we've reached the end
+        return $current === 0;
+    }
+
+    $next = array_pop($values);
+
+    // RECURSION!
+    return
+        is_valid_part_two_optimized($outcome, $values, int_split($current, $next))
+        || ($current % $next === 0 ? is_valid_part_two_optimized($outcome, $values, intval($current / $next)) : false)
+        || is_valid_part_two_optimized($outcome, $values, $current - $next);
+}
+
+function int_split (int $current, int $next): int {
+    if (!str_ends_with((string)$current, (string)$next)) {
+        return -1; // full stop
+    }
+
+    return intval(substr((string)$current, 0, -1 * strlen((string)$next)));
+}
+
 $sw->start();
-echo 'What is their total calibration result? ' . part_two($rows) . ' (' . $sw->ellapsed() . ')' . PHP_EOL;
+echo 'What is their total calibration result? ' . part_two_optimized($rows) . ' (' . $sw->ellapsed() . ')' . PHP_EOL;
