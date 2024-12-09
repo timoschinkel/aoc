@@ -145,5 +145,92 @@ function find_block(array $chunks, int $start, int $size): int {
     return -1; // not found
 }
 
+//$sw->start();
+//echo 'What is the resulting filesystem checksum? ' . part_two(reset($rows)) . ' (' . $sw->ellapsed() . ')' . PHP_EOL;
+
+/**
+ * Thinking about optimizations the only thing I could think of was searching the filesystem for a suitable block to be
+ * moved forward. Every block we start from the end and as we progress we will have to try more and more blocks. The
+ * optimization implemented is to keep an index per block size. We now only need to check every size at most once. What
+ * stumbled me initially with this approach is that the largest block is not always the highest id. In the example input
+ * one might be tempted to use the 7 to fill behind the 00 as that fills up all three available slots, but really it
+ * should be the 99 followed by the 2.
+ *
+ * @param string $disk_map
+ * @return int
+ */
+function part_two_optimized(string $disk_map): int {
+    $chunks = [];
+    $index_by_size = array_fill(0, 10, []);
+
+    for ($i = 0; $i < ceil(strlen($disk_map) / 2); $i++) {
+        $chunks[] = [$block = intval($disk_map[$i * 2]), intval($disk_map[$i * 2 + 1] ?? 0), false];
+        $index_by_size[$block][] = $i;
+    }
+
+    $checksum = 0;
+    $position = 0;
+
+    foreach (array_keys($chunks) as $left_index) {
+        $chunk = $chunks[$left_index];
+
+        // File block
+        for ($i = 0; $i < $chunk[0]; $i++) {
+            if (!$chunk[2]) {
+                $checksum += $position * $left_index;
+            }
+            $position++;
+        }
+
+        if ($chunk[1] === 0) {
+            continue;
+        }
+
+        // Free space
+        // Starting from the end of the list find a block with the same size
+        $space_left = $chunk[1];
+        $right_index = find_block_optimized($index_by_size, $left_index, $space_left);
+        while ($right_index !== -1) {
+            // Populate
+            for ($i = 0; $i < $chunks[$right_index][0]; $i++) {
+                $checksum += $position * $right_index;
+                $position++;
+                $space_left--;
+            }
+
+            $chunks[$right_index][2] = true;
+
+            $right_index = find_block_optimized($index_by_size, $left_index, $space_left);
+        }
+
+        // If we could not find a fit, we fill with empty
+        $position += $space_left;
+    }
+
+    return $checksum;
+}
+
+function find_block_optimized(array &$index_by_size, int $start, int $size): int {
+    $max = ['index' => -1, 'size' => -1];
+
+    for ($i = $size; $i > 0; $i--) {
+        if (count($index_by_size[$i]) === 0) {
+            continue;
+        }
+
+        $eligible = $index_by_size[$i][count($index_by_size[$i]) - 1];
+
+        if ($eligible > $start && $eligible > $max['index']) {
+            // Found better candidate
+            $max = ['index' => $eligible, 'size' => $i];
+        }
+    }
+
+    if ($max['index'] !== -1) {
+        array_pop($index_by_size[$max['size']]); // update index
+    }
+    return $max['index'];
+}
+
 $sw->start();
-echo 'What is the resulting filesystem checksum? ' . part_two(reset($rows)) . ' (' . $sw->ellapsed() . ')' . PHP_EOL;
+echo 'What is the resulting filesystem checksum? ' . part_two_optimized(reset($rows)) . ' (' . $sw->ellapsed() . ')' . PHP_EOL;
