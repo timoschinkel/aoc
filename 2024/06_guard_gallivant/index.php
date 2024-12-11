@@ -30,7 +30,7 @@ class Map {
     }
 
     public function get(int $row, int $column): ?string {
-        return $this->fields[$row][$column];
+        return $this->fields[$row][$column] ?? null;
     }
 
     public function set(int $row, int $column, string $char): void {
@@ -188,5 +188,114 @@ function find_path (Map $map): array {
     return $visited;
 }
 
+/**
+ * In the original part 2 implementation we rebuilt the entire route from the start with the additional obstacle. That
+ * means that the further we are in the path, we will rewalk a growing portion of the path. The optimization is that we
+ * build the path following the logic of part 1 and whenever we encounter a non-obstacle position we put in an obstacle
+ * and _continue the path from the point we introduced the obstacle_.
+ *
+ * @param Map $map
+ * @return int
+ */
+function part_two_optimized(Map $map): int {
+    // Find guard position
+    ['row' => $row, 'column' => $column] = $map->find('^');
+
+    // Keep track of the locations we already tried
+    $obstacles = ["{$column}x{$row}" => false];
+
+    // Setup
+    $direction = '^';
+    $dRow = -1;
+    $dCol = 0;
+
+    /** @var array<string, string> $path */
+    $path = ["{$column}x{$row}" => $direction];
+
+    do {
+        // look at the next step
+        $nextRow = $row + $dRow;
+        $nextColumn = $column + $dCol;
+
+        $next = $map->get($nextRow, $nextColumn);
+        if ($next === '#') {
+            // We cannot move there, we need to rotate!
+            ['direction' => $direction, 'dCol' => $dCol, 'dRow' => $dRow] = rotate($direction);
+        } else {
+            // We can move there!
+            // Or can we?!
+            if ($next === null) {
+                break;
+            }
+
+            // let's put in an obstacle!
+            if (!isset($obstacles["{$nextColumn}x{$nextRow}"])) {
+                $map->set($nextRow, $nextColumn, '*');
+                $obstacles["{$nextColumn}x{$nextRow}"] = !is_valid_path($map, $row, $column, $direction, $path);
+                $map->set($nextRow, $nextColumn, '.');
+            }
+
+            $row = $nextRow;
+            $column = $nextColumn;
+        }
+
+        // add to path
+        $path["{$column}x{$row}"] = ($path["{$column}x{$row}"] ?? '') . $direction;
+    } while ($row >= 0 && $row < $map->height && $column >= 0 && $column < $map->width);
+
+    return count(array_filter($obstacles));
+}
+
+function rotate(string $direction): array {
+    if ($direction === '^') return ['direction' => '>', 'dCol' => 1, 'dRow' => 0];
+    elseif ($direction === '>') return ['direction' => 'v', 'dCol' => 0, 'dRow' => 1];
+    elseif ($direction === 'v') return ['direction' => '<', 'dCol' => -1, 'dRow' => 0];
+    elseif ($direction === '<') return ['direction' => '^', 'dCol' => 0, 'dRow' => -1];
+    else
+        throw new Error('Unknown direction: ' . $direction);
+}
+
+/**
+ * @param Map $map
+ * @param int $row
+ * @param int $column
+ * @param string $direction
+ * @param array<string, string> $path
+ * @return bool
+ */
+function is_valid_path(Map $map, int $row, int $column, string $direction, array $path): bool {
+    // we now we need to rotate:
+    ['direction' => $direction, 'dCol' => $dCol, 'dRow' => $dRow] = rotate($direction);
+
+    do {
+        // look at the next step
+        $nextRow = $row + $dRow;
+        $nextColumn = $column + $dCol;
+
+        $next = $map->get($nextRow, $nextColumn);
+        if ($next === '#' || $next === '*') {
+            // We cannot move there, we need to rotate!
+            ['direction' => $direction, 'dCol' => $dCol, 'dRow' => $dRow] = rotate($direction);
+        } elseif (strpos($path["{$nextColumn}x{$nextRow}"] ?? '', $direction) !== false) {
+            // We have found a cycle!
+            return false;
+        } elseif ($next === null) {
+            return true;
+        } else {
+            // We can move there
+            $row = $nextRow;
+            $column = $nextColumn;
+        }
+
+        // add to path
+        $path["{$column}x{$row}"] = ($path["{$column}x{$row}"] ?? '') . $direction;
+    } while ($row >= 0 && $row < $map->height && $column >= 0 && $column < $map->width);
+
+    return true; // we're out of bounds
+}
+
+//$sw->start();
+//echo 'How many different positions could you choose for this obstruction? ' . part_two($map) . ' (' . $sw->ellapsed() . ')' . PHP_EOL;
+
 $sw->start();
-echo 'How many different positions could you choose for this obstruction? ' . part_two($map) . ' (' . $sw->ellapsed() . ')' . PHP_EOL;
+echo 'How many different positions could you choose for this obstruction? ' . part_two_optimized($map) . ' (' . $sw->ellapsed() . ')' . PHP_EOL;
