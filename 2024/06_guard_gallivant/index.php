@@ -188,6 +188,11 @@ function find_path (Map $map): array {
     return $visited;
 }
 
+const UP = 1;
+const RIGHT = 2;
+const DOWN = 4;
+const LEFT = 8;
+
 /**
  * In the original part 2 implementation we rebuilt the entire route from the start with the additional obstacle. That
  * means that the further we are in the path, we will rewalk a growing portion of the path. The optimization is that we
@@ -196,6 +201,7 @@ function find_path (Map $map): array {
  *
  * Further optimizations are to reduce the weight of the operations;
  * - use numeric indices for the path
+ * - use bitmasks for visited directions to reduce string operations even more
  *
  * @param Map $map
  * @return int
@@ -204,15 +210,22 @@ function part_two_optimized(Map $map): int {
     // Find guard position
     ['row' => $row, 'column' => $column] = $map->find('^');
 
-    // Keep track of the locations we already tried
+    /**
+     * Instead of simply counting obstacles we want to keep track of the positions we have checked. My input - and I
+     * expect all inputs do - contains a number of crossings where we pass the same position in different directions. In
+     * those scenarios we don't need to check the position twice. Easiest way to do this is to use the same approach we
+     * use for the paths; an array indexed with the position.
+     *
+     * @var array<int, bool> $obstacles
+     */
     $obstacles = [$row * $map->width + $column => false];
 
     // Setup
-    $direction = '^';
+    $direction = UP;
     $dRow = -1;
     $dCol = 0;
 
-    /** @var array<int, string> $path */
+    /** @var array<int, int> $path */
     $path = [$row * $map->width + $column => $direction];
 
     do {
@@ -243,17 +256,17 @@ function part_two_optimized(Map $map): int {
         }
 
         // add to path
-        $path[$row * $map->width + $column] = ($path[$row * $map->width + $column] ?? '') . $direction;
+        $path[$row * $map->width + $column] = ($path[$row * $map->width + $column] ?? 0) | $direction;
     } while ($row >= 0 && $row < $map->height && $column >= 0 && $column < $map->width);
 
     return count(array_filter($obstacles));
 }
 
-function rotate(string $direction): array {
-    if ($direction === '^') return ['direction' => '>', 'dCol' => 1, 'dRow' => 0];
-    elseif ($direction === '>') return ['direction' => 'v', 'dCol' => 0, 'dRow' => 1];
-    elseif ($direction === 'v') return ['direction' => '<', 'dCol' => -1, 'dRow' => 0];
-    elseif ($direction === '<') return ['direction' => '^', 'dCol' => 0, 'dRow' => -1];
+function rotate(int $direction): array {
+    if ($direction === UP) return ['direction' => RIGHT, 'dCol' => 1, 'dRow' => 0];
+    elseif ($direction === RIGHT) return ['direction' => DOWN, 'dCol' => 0, 'dRow' => 1];
+    elseif ($direction === DOWN) return ['direction' => LEFT, 'dCol' => -1, 'dRow' => 0];
+    elseif ($direction === LEFT) return ['direction' => UP, 'dCol' => 0, 'dRow' => -1];
     else
         throw new Error('Unknown direction: ' . $direction);
 }
@@ -262,11 +275,11 @@ function rotate(string $direction): array {
  * @param Map $map
  * @param int $row
  * @param int $column
- * @param string $direction
- * @param array<int, string> $path
+ * @param int $direction
+ * @param array<int, int> $path
  * @return bool
  */
-function is_valid_path(Map $map, int $row, int $column, string $direction, array $path): bool {
+function is_valid_path(Map $map, int $row, int $column, int $direction, array $path): bool {
     // we now we need to rotate:
     ['direction' => $direction, 'dCol' => $dCol, 'dRow' => $dRow] = rotate($direction);
 
@@ -279,7 +292,7 @@ function is_valid_path(Map $map, int $row, int $column, string $direction, array
         if ($next === '#' || $next === '*') {
             // We cannot move there, we need to rotate!
             ['direction' => $direction, 'dCol' => $dCol, 'dRow' => $dRow] = rotate($direction);
-        } elseif (strpos($path[$nextRow * $map->width + $nextColumn] ?? '', $direction) !== false) {
+        } elseif ((($path[$nextRow * $map->width + $nextColumn] ?? 0) & $direction) === $direction) {
             // We have found a cycle!
             return false;
         } elseif ($next === null) {
@@ -291,7 +304,7 @@ function is_valid_path(Map $map, int $row, int $column, string $direction, array
         }
 
         // add to path
-        $path[$row * $map->width + $column] = ($path[$row * $map->width + $column] ?? '') . $direction;
+        $path[$row * $map->width + $column] = ($path[$row * $map->width + $column] ?? 0) | $direction;
     } while ($row >= 0 && $row < $map->height && $column >= 0 && $column < $map->width);
 
     return true; // we're out of bounds
