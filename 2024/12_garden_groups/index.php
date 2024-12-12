@@ -85,7 +85,7 @@ function part_one(Map $map): int {
         $price += price($region);
 
         // Remove plots in the region from the plots to check
-        $plots = array_filter($plots, fn(Position $plot): bool => !in_array($plot, $region));
+        $plots = array_diff($plots, $region);
     }
 
     return $price;
@@ -147,7 +147,7 @@ function part_two(Map $map): int {
         $price += price_part_two($region);
 
         // Remove plots in the region from the plots to check
-        $plots = array_filter($plots, fn(Position $plot): bool => !in_array($plot, $region));
+        $plots = array_diff($plots, $region);
     }
 
     return $price;
