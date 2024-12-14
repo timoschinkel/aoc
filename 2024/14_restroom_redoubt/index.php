@@ -130,7 +130,9 @@ function part_two(int $width, int $height, Robot ...$robots): int {
             $locations[$robot->row * $width + $robot->column] = true;
         }
 
-        if (is_drawing($width, $height, $locations)) {
+        // No sure if this applies to all input, but I noticed that the iteration with the drawing did not have any
+        // position that had multiple robots. I heard more people mention this, so I will add it as an optimization.
+        if (count($locations) === count($robots) && is_drawing($width, $height, $locations)) {
             break;
         }
     }
