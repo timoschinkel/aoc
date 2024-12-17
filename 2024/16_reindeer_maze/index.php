@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Timoschinkel\Aoc2024;
+namespace Timoschinkel\Aoc2024\Day16;
 
 require_once dirname(__DIR__) . DIRECTORY_SEPARATOR . 'Stopwatch.php';
 
@@ -149,9 +149,132 @@ function create_visited_map(Map $map): array {
 $sw->start();
 echo 'What is the lowest score a Reindeer could possibly get? ' . part_one($map) . ' (' . $sw->ellapsed() . ')' . PHP_EOL;
 
-function part_two(Map $map): int {
-    return 0;
+function directions(Map $map): array {
+    return [
+        $map->width * -1,
+        1,
+        $map->width,
+        -1,
+    ];
 }
 
+function turns(Map $map, int $direction): array {
+    return $direction === 1 || $direction === -1
+        ? [$map->width * -1, $map->width]
+        : [1, -1];
+}
+
+/**
+ * When performing BFS/DFS, then we can find the path by backtracking. But that will not give us the alternative routes
+ * that will have the same cost. This is because a node will inevitably be visited first from one direction, which can
+ * lead to a lower score. To remedy this I run BFS and keep track of the direction. That means that for the following
+ * scenario:
+ *
+ * #  X     1
+ * # 1001
+ * #
+ *
+ * x will be reachable from the left in 2, and from the bottom in 1002. However, when coming from the right we need to
+ * rotate. By administrating the direction x will have the values [from right: 2, from bottom: 1002], since the
+ * difference is exactly the cost of a 90 degrees turn we can now track back both paths.
+ *
+ * @param Map $map
+ * @return int
+ */
+function part_two(Map $map): int {
+    $end = $map->find('E')->index($map->width);
+    $start = $map->find('S')->index($map->width);
+
+    // $map->draw($start, $end);
+
+    // Perform BFS with a directional index
+
+    /** @var array<int, array<string, int>> $visited */
+    $visited = [
+        $start => array_combine(directions($map), array_fill(0, 4, 0)),
+    ];
+
+    /** @var array<string, array<string, int>> $to_check */
+    $to_check = [];
+
+    foreach (directions($map) as $direction) {
+        if ($map->get($start + $direction) !== '#') {
+            $to_check[$start + $direction] = ['position' => $start + $direction, 'direction' => $direction, 'cost' => 1];
+        }
+    }
+
+    while (count($to_check) > 0) {
+        ['position' => $current, 'direction' => $direction, 'cost' => $cost] = array_shift($to_check);
+
+        if (isset($visited[$current][$direction]) && $cost >= $visited[$current][$direction]) {
+            // We already had a more optimal path to $current, no need to continue looking
+            continue;
+        }
+
+        // Found a new shortest path to $current
+        $visited[$current][$direction] = $cost;
+
+        if ($current === $end) {
+            // We've reached our goal, no need to continue looking
+            continue;
+        }
+
+        // walk straight
+        $next = $current + $direction;
+        if (
+            $map->get($current + $direction) !== '#'
+            && (!isset($visited[$next][$direction]) || $visited[$next][$direction] > $cost + 1)
+            && !isset($to_check[$current + $direction])
+        ) {
+            $to_check[$current + $direction] = ['position' => $current + $direction, 'direction' => $direction, 'cost' => $cost + 1];
+        }
+
+        // check the turns
+        foreach (turns($map, $direction) as $turn) {
+            if (
+                $map->get($current + $turn) !== '#'
+                && (!isset($visited[$current][$turn]) || $visited[$current][$turn] > $cost + 1000)
+                && !isset($to_check[$current + $turn])
+            ) {
+                $visited[$current][$turn] = $cost + 1000;
+                $to_check[$current + $turn] = ['position' => $current + $turn, 'direction' => $turn, 'cost' => $cost + 1001];
+            }
+        }
+    }
+
+    $min = min($visited[$end]);
+
+    // Back track through the path
+    $path = [];
+    $to_check = [];
+    foreach ($visited[$end] as $direction => $cost) {
+        if ($cost === $min) {
+            $to_check[] = ['position' => $end, 'direction' => $direction];
+        }
+    }
+
+    while (count($to_check) > 0) {
+        ['position' => $current, 'direction' => $direction] = array_shift($to_check);
+        $path[$current] = $current; // deduplicate as we go
+
+        // check straight
+        if (isset($visited[$current - $direction][$direction]) && $visited[$current - $direction][$direction] === $visited[$current][$direction] - 1) {
+            $to_check[] = ['position' => $current - $direction, 'direction' => $direction];
+        }
+
+        // check for turns
+        foreach (turns($map, $direction) as $turn) {
+            if (isset($visited[$current][$turn]) && $visited[$current][$turn] === $visited[$current][$direction] - 1000) {
+                // Yes, we try to make the turn
+                $to_check[] = ['position' => $current - $turn, 'direction' => $turn];
+            }
+        }
+    }
+
+    //$map->draw(...$path);
+    return count($path);
+}
+
+
 $sw->start();
-echo 'What is their similarity score? ' . part_two($map) . ' (' . $sw->ellapsed() . ')' . PHP_EOL;
+echo 'How many tiles are part of at least one of the best paths through the maze? ' . part_two($map) . ' (' . $sw->ellapsed() . ')' . PHP_EOL;
