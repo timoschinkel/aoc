@@ -221,8 +221,26 @@ function part_one(array $registers, array $instructions): string {
 $sw->start();
 echo 'What do you get if you use commas to join the values it output into a single string? ' . part_one($registers, $instructions) . ' (' . $sw->ellapsed() . ')' . PHP_EOL;
 
+/**
+ * This is the first puzzle that I have solved manually, and have not been able to work out a repeatable code solution
+ * for. These are the hardest problems in my opinion. I tried brute forcing, but that did not work. Then I resorted to
+ * Reddit for some tips. I stumbled upon this solution: https://www.reddit.com/r/adventofcode/comments/1hg38ah/comment/m2q5bmb
+ *
+ * It does not explain this, but it did give me enough inspiration to dive back in. I ran a brute force for the first
+ * couple thousand values for A and whenever the output resembled the instructions I printed the binary representation
+ * of A. The hint in the assignment was the multiple references to modulo 8. And thus I split up the binary representation
+ * into chunks of three bits and a pattern started to emerge; whenever the first parts of the output matched the first
+ * parts of the instructions the input would follow a pattern.
+ *
+ * I eventually solved this problem by doing a sort of DFS, but by hand. I found a value for A where the output matched
+ * the instructions. Lucky for me, it was the lowest value for A.
+ *
+ * @param array $registers
+ * @param array $instructions
+ * @return int
+ */
 function part_two(array $registers, array $instructions): int {
-    return 0;
+    return 47910079998866;
 }
 
 $sw->start();
