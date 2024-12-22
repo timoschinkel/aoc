@@ -19,28 +19,32 @@ $sw = new \Stopwatch();
  * Idea one; let's just implement the rules. Within 10 iterations I exceeded the maximum value of a 64-bit integer in
  * PHP. I was able to rewrite to GMP. The runtime is approx. 5 seconds, which is too much, but it does get an answer.
  * 
+ * Optimization
+ * The solution took way too long, there must be a faster solution. I noticed the numbers 64, 32 and 2048. Those are
+ * multiples of 2, and that is an indication of binary operations. After doing some trial and error - and some research - 
+ * I realised that multiplying by 0x1000000 (64) is equivalent of bit shifting 6 positions left. The operation that 
+ * stumped me was the %16777216, but I found help on [Reddit][reddit] and learned that %16777216 is equivalent of &0xffffff.
+ * I was able to rewrite the entire solution to binary operations, bringing down the runtime to a little over 100ms.
+ * 
+ * [Reddit]: https://www.reddit.com/r/adventofcode/comments/1hjroap/comment/m390z6x/
+ * 
  * @param int[] $numbers
- * @return \GMP
+ * @return int
  */
-function part_one(array $numbers): \GMP {
-    $sum = gmp_init(0);
-
+function part_one(array $numbers): int {
+    $sum = 0;
     foreach ($numbers as $number) {
-        $original = $number;
-        $number = gmp_init($number);
-        
         for ($i = 0; $i < 2000; $i++) {
-            $number = gmp_xor($number, gmp_mul($number, 64));
-            $outcome = gmp_mod($number, 16777216);
-            $number = gmp_xor($number, gmp_div($outcome, 32));
-            $outcome = gmp_mod($number, 16777216);
-            $number = gmp_xor($number, gmp_mul($outcome, 2048));
-            $outcome = gmp_mod($number, 16777216);
+            $number = $number ^ $number << 6 /* *64 */;
+            $next = $number & 0xffffff /* %16777216 */;
+            $number = $number ^ $next >> 5 /* /32 */;
+            $next = $number & 0xffffff;
+            $number = $number ^ $number << 11 /* *2048 */;
+            $next = $number & 0xffffff;
         }
-
-        // echo $original . ': ' . $outcome . PHP_EOL;
-        $sum = gmp_add($sum, $outcome);
+        $sum += $next;
     }
+
     return $sum;
 }
 
