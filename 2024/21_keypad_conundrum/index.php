@@ -14,6 +14,17 @@ $rows = array_filter(explode(PHP_EOL, file_get_contents($input)));
 
 $sw = new \Stopwatch();
 
+/**
+ * An important observation is that most numeric codes can be achieved in multiple ways; from 2 to 9 is always
+ * achievable in 3 steps, but it can be achieved via ^^>, ^>^, and >^^. As the numeric pad is operated using the
+ * directional pads, different paths can lead to different (length) paths down the directional pads. I cheated a little
+ * bit - or was smart - and precalculated the different paths between any two keys for both the directional and numeric
+ * keypads. With that information I implemented a recursive implementation, hoping it would work in two levels deep. It
+ * does.
+ *
+ * @param array<string> $codes
+ * @return int
+ */
 function part_one(array $codes): int {
     $complexity = 0;
     foreach ($codes as $code) {
@@ -40,21 +51,15 @@ function part_one(array $codes): int {
     return $complexity;
 }
 
-$cache = [];
 function find_shortest(string $pattern): string {
     if (strlen($pattern) === 0) return '';
-
-    global $cache;
-    if (isset($cache[$pattern])) return $cache[$pattern];
 
     // find until first A
     $a = strpos($pattern, 'A');
     $first = substr($pattern, 0, $a + 1);
     $remainder = substr($pattern, $a + 1);
 
-    $shortest = shortest($first) . find_shortest($remainder);
-    $cache[$pattern] = $shortest;
-    return $cache[$pattern];
+    return shortest($first) . find_shortest($remainder);
 }
 
 function shortest(string $pattern): string {
@@ -71,9 +76,8 @@ function shortest(string $pattern): string {
     return $shortest;
 }
 
-function numeric_keypad(string $code): array
-{
-    $paths = [
+function get_numeric_keypad(): array {
+    return [
         '0' => [
             '0' => 'A',
             '1' => '^<A',
@@ -218,6 +222,11 @@ function numeric_keypad(string $code): array
             'A' => 'A',
         ]
     ];
+}
+
+function numeric_keypad(string $code): array
+{
+    $paths = get_numeric_keypad();
 
     $out = [];
     $to_check = [['pos' => 'A', 'path' => '', 'code' => $code]];
@@ -242,9 +251,8 @@ function numeric_keypad(string $code): array
     return $out;
 }
 
-function directional_keypad(string $code): array
-{
-    $paths = [
+function get_directional_keypad(): array {
+    return [
         '^' => [
             '^' => 'A',
             '>' => ['>vA', 'v>A'],
@@ -281,6 +289,11 @@ function directional_keypad(string $code): array
             'A' => 'A',
         ],
     ];
+}
+
+function directional_keypad(string $code): array
+{
+    $paths = get_directional_keypad();
 
     // we only want with the shortest path
 
@@ -322,8 +335,75 @@ function directional_keypad(string $code): array
 $sw->start();
 echo 'What is the sum of the complexities of the five codes on your list? ' . part_one($rows) . ' (' . $sw->ellapsed() . ')' . PHP_EOL;
 
+/**
+ * Simple recursion is not going to cut it. I tried it, but I quickly ran out of memory. The trick is to use caching or
+ * memoization. Initially I tried to use the same approach as day 19 and cache the entire sequence, but that had the
+ * same outcome as the initial approach; out of memory. It took a hint from someone else to point me towards what needed
+ * to be cached; per depth, from and to character gives enough speed improvement and is not too heavy on memory. This is
+ * possible, because apart from the numeric pad all iterations of the directional keypad start at A and end at A,
+ * because A needs to be pressed to press the button in the next keypad.
+ *
+ * On thing to keep in mind, and that is what tricked me; every code starts with A. So for the numeric code I manually
+ * add an A to the front of the code, and for the directional keypads I do the same, only a little bit implicit.
+ *
+ * @param array<string> $codes
+ * @return int
+ */
 function part_two(array $codes): int {
-    return 0;
+    $complexity = 0;
+
+    foreach ($codes as $code) {
+//        echo 'Code: ' . $code . PHP_EOL;
+        $value = intval($code);
+
+        $length = 0;
+        $cache = [];
+
+        $code = 'A' . $code; // we're starting at the A position
+        for($c = 0; $c < strlen($code) - 1; $c++) {
+            $length += $s = find_shortest_part_two(get_numeric_keypad(), $code[$c], $code[$c + 1], 25, $cache);
+            //echo 'From ' . ($code[$c]) . ' to ' . $code[$c+1] . ' takes ' . $s . PHP_EOL . PHP_EOL;
+        }
+
+//        echo $length . ' steps' . PHP_EOL;
+
+        $complexity += $value * $length;
+    }
+
+    return $complexity;
+}
+
+function find_shortest_part_two(array $keypad, string $from, string $to, int $depth, array &$cache): int
+{
+//    echo 'Find shortest path from ' . $from . ' to ' . $to . ' at depth ' . $depth . PHP_EOL;
+    if (isset($cache["{$from}-{$to}-{$depth}"])) {
+        return $cache["{$from}-{$to}-{$depth}"];
+    }
+
+    $paths = $keypad[$from][$to];
+    if (!is_array($paths)) $paths = [$paths];
+
+    if ($depth === 0) {
+        // press the button?
+//        echo 'At depth 0, returning ' . (strlen($paths[0]) + 1) . ' (MH + 1) for pressing the button' . PHP_EOL;
+        return strlen($paths[0]);
+    }
+
+    // Iterate over every potential path
+    $min = null;
+    foreach ($paths as $path) {
+//        echo 'Checking path ' . $path . ' at depth ' . $depth . PHP_EOL;
+        $length = 0;
+        for($c = -1; $c < strlen($path) - 1; $c++) {
+            // Start at -1 and fall back to A; that way we always start at A.
+            $length += find_shortest_part_two(get_directional_keypad(), $path[$c] ?? 'A', $path[$c + 1], $depth - 1, $cache);
+        }
+
+        if ($min === null || $length < $min) $min = $length;
+    }
+
+    $cache["{$from}-{$to}-{$depth}"] = $min;
+    return $min;
 }
 
 $sw->start();
