@@ -29,6 +29,11 @@ class Position {
         [$column, $row] = explode(',', $input);
         return new self((int)$column, (int)$row);
     }
+
+    public function add(Position $position): self
+    {
+        return new self($this->column + $position->column, $this->row + $position->row);
+    }
 }
 
 $bytes = array_map(fn(string $row): Position => Position::create($row), $rows);
@@ -113,11 +118,12 @@ function draw(int $width, int $height, array $visited): void
 {
     for ($row = 0; $row < $width; $row++) {
         for ($col = 0; $col < $height; $col++) {
-            if (isset($visited[$row * $width + $col])) {
-                echo '#';
-            } else {
-                echo '.';
-            }
+            echo $visited[$row * $width + $col] ?? '.';
+//            if (isset($visited[$row * $width + $col])) {
+//                echo '#';
+//            } else {
+//                echo '.';
+//            }
         }
         echo PHP_EOL;
     }
@@ -147,5 +153,118 @@ function part_two(int $width, int $height, int $length, array $bytes): string {
     return '';
 }
 
+/**
+ * I found this really nice visualization for this on [Reddit][reddit], and I decided to implement it. Compared to the
+ * brute-force solution from `part_two()` this runs in 12ms, instead of 4.5s.
+ *
+ * There is a path from top-left to bottom-right, and we need to determine when this path is no longer feasible. This
+ * path is no longer feasible when the north and/or east sides are connected to the south and/or west sides:
+ *
+ * RRRRRRRRRR
+ * BS       R
+ * B        R
+ * B       ER
+ * BBBBBBBBBB
+ *
+ * In this diagram; the moment R touches B a path is no longer feasible. To achieve this for every byte that drops we
+ * check if the byte is touching one of the borders, and assign it that value. We also check if we are neighboring a
+ * already dropped byte that has a value. In that case we perform a flood fill algorithm.
+ *
+ * [reddit]: https://www.reddit.com/r/adventofcode/comments/1hhiawu/2024_day_18_part_2_visualization_of_my_algorithm
+ *
+ * @param int $width
+ * @param int $height
+ * @param int $length
+ * @param array<Position> $bytes
+ * @return string
+ */
+function part_two_optimized(int $width, int $height, int $length, array $bytes): string {
+    /** @var array<int, string> $fields */
+    $fields = [];
+
+   foreach ($bytes as $byte) {
+        $red = 0; $blue = 0;
+
+        $value = '#';
+
+        // Check if we are at a boundary
+        if ($byte->row === 0 || $byte->column === $width - 1) {
+//            echo 'Marking as RED' . PHP_EOL;
+            $fields[$byte->row * $width + $byte->column] = 'R';
+            $value = 'R';
+        } elseif ($byte->column === 0 || $byte->row === $height - 1) {
+//            echo 'Marking as BLUE' . PHP_EOL;
+            $fields[$byte->row * $width + $byte->column] = 'B';
+            $value = 'B';
+        }
+
+        // check all 9 neighbors
+        /** @var array<Position> $neighbors */
+        $neighbors = []; // We might need this in a followup step
+        foreach (neighbors($byte, $width, $height) as $neighbor) {
+            $index = ($byte->row + $neighbor->row) * $width + ($byte->column + $neighbor->column);
+            if (($fields[$index] ?? '') === 'B') $blue++;
+            elseif (($fields[$index] ?? '') === 'R') $red++;
+            elseif (isset($fields[$index])) $neighbors[] = $byte->add($neighbor);
+        }
+
+        if ($red > 0 && $blue > 0 || ($red > 0 && $value === 'B') || ($blue > 0 && $value === 'R')) {
+            // We have found a collision!
+            return "{$byte->column},{$byte->row}";
+        } elseif ($red > 0) {
+//            echo 'Found red neighbor(s)' . PHP_EOL;
+            $fields[$byte->row * $width + $byte->column] = 'R';
+        } elseif ($blue > 0) {
+//            echo 'Found blue neighbor(s)' . PHP_EOL;
+            $fields[$byte->row * $width + $byte->column] = 'B';
+        } elseif ($value === '#') {
+            $fields[$byte->row * $width + $byte->column] = '#';
+            continue; // move on to next byte
+        }
+
+        if (count($neighbors) > 0) {
+            // we perform a flood fill from the current location starting with `$neighbors`
+            $value = $fields[$byte->row * $width + $byte->column];
+
+            while (count($neighbors) > 0) {
+                $neighbor = array_pop($neighbors);
+
+//                echo 'Setting '. $neighbor->column . ', '. $neighbor->row . ' to ' . $value . PHP_EOL;
+                $fields[$neighbor->row * $width + $neighbor->column] = $value;
+
+                foreach (neighbors($neighbor, $width, $height) as $direction) {
+                    $candidate = $neighbor->add($direction);
+                    if (($fields[$candidate->row * $width + $candidate->column] ?? '') === '#') {
+                        $neighbors[] = $candidate;
+                    }
+                }
+            }
+        }
+    }
+
+    return '';
+}
+
+/**
+ * @return array<Position>
+ */
+function neighbors(Position $position, int $width, int $height): array
+{
+    $neighbors = [];
+
+    if ($position->row > 0 && $position->column > 0) $neighbors[] = new Position(-1, -1);
+    if ($position->row > 0) $neighbors[] = new Position(0, -1);
+    if ($position->row > 0 && $position->column < $width - 1) $neighbors[] = new Position(1, -1);
+
+    if ($position->column > 0) $neighbors[] = new Position(-1, 0);
+    if ($position->column < $width - 1) $neighbors[] = new Position(1, 0);
+
+    if ($position->row < $height - 1 && $position->column > 0) $neighbors[] = new Position(-1, 1);
+    if ($position->row < $height - 1 ) $neighbors[] = new Position(0, 1);
+    if ($position->row < $height - 1 && $position->column < $width - 1) $neighbors[] = new Position(1, 1);
+
+    return $neighbors;
+}
+
 $sw->start();
-echo 'What are the coordinates of the first byte that will prevent the exit from being reachable from your starting position? ' . part_two($width, $height, $length, $bytes) . ' (' . $sw->ellapsed() . ')' . PHP_EOL;
+echo 'What are the coordinates of the first byte that will prevent the exit from being reachable from your starting position? ' . part_two_optimized($width, $height, $length, $bytes) . ' (' . $sw->ellapsed() . ')' . PHP_EOL;
