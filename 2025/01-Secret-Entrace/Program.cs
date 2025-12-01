@@ -23,8 +23,9 @@ PrintElapsedTime($"Using password method 0x434C49434B, what is the password to o
 // Part 02
 sw = Stopwatch.StartNew();
 // perform calculation
+int two = PartTwo(instructions);
 sw.Stop();
-PrintElapsedTime($"The answer is: {0} ([ELAPSED])", sw.Elapsed);
+PrintElapsedTime($"Using password method 0x434C49434B, what is the password to open the door? {two} ([ELAPSED])", sw.Elapsed);
 
 int PartOne(Rotation[] instructions)
 {
@@ -45,8 +46,62 @@ int PartOne(Rotation[] instructions)
             position = (position + instruction.Clicks) % 100;   
         }
 
-        Console.WriteLine($"{instruction.Direction}{instruction.Clicks}: {position}");
-        
+        if (position == 0)
+        {
+            zeros++;
+        }
+    }
+
+    return zeros;
+}
+
+int PartTwo(Rotation[] instructions)
+{
+    int position = 50;
+    int zeros = 0;
+
+    // instructions = new[] { new Rotation("R", 49) };
+
+    foreach (var instruction in instructions)
+    {
+        // We will pass 0 for every rotation by definition independent of the start position
+        if (Math.Abs(instruction.Clicks) >= 100)
+        {
+            zeros += (int)Math.Floor(instruction.Clicks / 100.0);
+        }
+
+        // We now only need the remainder
+        var clicks = instruction.Clicks % 100;
+
+        if (instruction.Direction == "L")
+        {
+            if (position > 0 && position < clicks)
+            {
+                // We pass 0
+                position = position - clicks + 100;
+                zeros++;
+            } else {
+                position -= clicks;
+                if (position < 0)
+                {
+                    position += 100;
+                }
+            }
+        }
+        else // assume R
+        {
+            if (position + clicks > 100)
+            {
+                // We pass 0
+                position = position + clicks - 100;
+                zeros++;
+            }
+            else
+            {
+                position = (position + clicks) % 100;
+            }
+        }
+
         if (position == 0)
         {
             zeros++;
