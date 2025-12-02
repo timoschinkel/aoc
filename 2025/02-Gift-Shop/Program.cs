@@ -17,8 +17,9 @@ PrintElapsedTime($"What do you get if you add up all of the invalid IDs? {one} (
 // Part 02
 sw = Stopwatch.StartNew();
 // perform calculation
+var two = PartTwo(ranges);
 sw.Stop();
-PrintElapsedTime($"The answer is: {0} ([ELAPSED])", sw.Elapsed);
+PrintElapsedTime($"What do you get if you add up all of the invalid IDs using these new rules? {two} ([ELAPSED])", sw.Elapsed);
 
 long PartOne(Range[] ranges)
 {
@@ -40,6 +41,27 @@ long PartOne(Range[] ranges)
             if (i % power == i / power)
             {
                 //Console.WriteLine($"Found invalid ID: {i}");
+                sum += i;
+            }
+        }
+    }
+    return sum;
+}
+
+long PartTwo(Range[] ranges)
+{
+    long sum = 0;
+    foreach (var range in ranges)
+    {
+        for (var i = range.First; i <= range.Last; i++)
+        {
+            /*
+             * This is a very in efficient solution, especially for day 02 - 820ms on my machine.
+             * But! It works and it is concise.
+             * This regular expression matches strings that have a repeating pattern that covers the entire "number"
+             */
+            if (Regex.IsMatch(i.ToString(), @"^(?<pattern>[0-9]+)(\k<pattern>)+$"))
+            {
                 sum += i;
             }
         }
