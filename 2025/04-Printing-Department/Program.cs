@@ -17,7 +17,7 @@ sw = Stopwatch.StartNew();
 // perform calculation
 long two = PartTwo(grid);
 sw.Stop();
-PrintElapsedTime($"The answer is: {two} ([ELAPSED])", sw.Elapsed);
+PrintElapsedTime($"How many rolls of paper in total can be removed by the Elves and their forklifts? {two} ([ELAPSED])", sw.Elapsed);
 
 long PartOne(char[][] grid)
 {
@@ -54,7 +54,40 @@ int CountNeighbors(char[][] grid, int x, int y)
 
 long PartTwo(char[][] grid)
 {
-    return 0;
+    long removed = 0;
+
+    long lastRun = 0;
+    do
+    {
+        (grid, lastRun) = RemovePaperRolls(grid);
+        removed += lastRun;
+    } while (lastRun > 0);
+    
+    return removed;
+}
+
+(char[][], long) RemovePaperRolls(char[][] grid)
+{
+    long removed = 0;
+    char[][] cleaned = new char[grid.Length][];
+    for (int y = 0; y < grid.Length; y++)
+    {
+        cleaned[y] = new char[grid[y].Length];
+        for (int x = 0; x < grid[y].Length; x++)
+        {
+            if (grid[y][x] == '@' && CountNeighbors(grid, x, y) < 4)
+            {
+                removed++;
+                cleaned[y][x] = '.';
+            }
+            else
+            {
+                cleaned[y][x] = grid[y][x];
+            }
+        }
+    }
+    
+    return (cleaned, removed);
 }
 
 void PrintElapsedTime(string message, TimeSpan ts)
