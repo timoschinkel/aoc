@@ -12,6 +12,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "04-Printing-Department", "0
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "05-Cafetaria", "05-Cafetaria\05-Cafetaria.csproj", "{3A2C03E0-BA46-4D8B-9FE8-4C7E84128BDE}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "06-Trash-Compactor", "06-Trash-Compactor\06-Trash-Compactor.csproj", "{A8D038FC-09BC-4FB0-8BF1-26BAB85B7E11}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -42,5 +44,9 @@ Global
 		{3A2C03E0-BA46-4D8B-9FE8-4C7E84128BDE}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{3A2C03E0-BA46-4D8B-9FE8-4C7E84128BDE}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{3A2C03E0-BA46-4D8B-9FE8-4C7E84128BDE}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A8D038FC-09BC-4FB0-8BF1-26BAB85B7E11}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A8D038FC-09BC-4FB0-8BF1-26BAB85B7E11}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A8D038FC-09BC-4FB0-8BF1-26BAB85B7E11}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A8D038FC-09BC-4FB0-8BF1-26BAB85B7E11}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal
