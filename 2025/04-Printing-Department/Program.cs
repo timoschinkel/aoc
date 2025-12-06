@@ -1,4 +1,4 @@
-﻿using System.Diagnostics;
+﻿using Shared;
 
 string[] input = File.ReadAllLines(Environment.GetEnvironmentVariable("INPUT") != null ? $"./{Environment.GetEnvironmentVariable("INPUT")}" : "./input.txt");
 
@@ -6,18 +6,18 @@ string[] input = File.ReadAllLines(Environment.GetEnvironmentVariable("INPUT") !
 char[][] grid = input.Select(line => line.ToCharArray()).ToArray();
 
 // Part 01
-var sw = Stopwatch.StartNew();
-// perform calculation
+var timer = new AocTimer();
 long one = PartOne(grid);
-sw.Stop();
-PrintElapsedTime($"How many rolls of paper can be accessed by a forklift? {one} ([ELAPSED])", sw.Elapsed);
+timer.Duration($"How many rolls of paper can be accessed by a forklift? {one}");
 
 // Part 02
-sw = Stopwatch.StartNew();
-// perform calculation
+timer = new AocTimer();
 long two = PartTwo(grid);
-sw.Stop();
-PrintElapsedTime($"How many rolls of paper in total can be removed by the Elves and their forklifts? {two} ([ELAPSED])", sw.Elapsed);
+timer.Duration($"How many rolls of paper in total can be removed by the Elves and their forklifts? {two}");
+
+timer = new AocTimer();
+two = PartTwoOptimized(grid);
+timer.Duration($"How many rolls of paper in total can be removed by the Elves and their forklifts? {two}");
 
 long PartOne(char[][] grid)
 {
@@ -90,39 +90,84 @@ long PartTwo(char[][] grid)
     return (cleaned, removed);
 }
 
-void PrintElapsedTime(string message, TimeSpan ts)
+long PartTwoOptimized(char[][] grid)
 {
-    var ns = ts.TotalNanoseconds;
-    var parts = message.Split("[ELAPSED]");
-    for (var i = 0; i < parts.Length; i++)
+    /*
+     * I took my default approach of implementing this by following the instructions. That proved to be fast enough.
+     *
+     * Can this be optimized? I think it can. I found this really nice visualization[1], which uses the idea of using a
+     * floodfill approach. If you take a first pass where you count the neighbors, and putting all the coordinates that are
+     * to be removed on a stack, then you can iterate over the stack and reduce the number of neighbors with 1. If the
+     * number of neighbors drops below the threshold, then we add it to the stack. Repeat this until the stack is empty.
+     *
+     * This approach is 4 to 5 times faster than my initial solution for part 2.
+     *
+     * [1]: https://www.reddit.com/r/adventofcode/comments/1pdt3u5/2025_day_4_part_2_decided_to_make_a_visualization/
+     */
+
+    long removed = 0;
+    Stack<(int, int)> stack = new Stack<(int, int)>();
+    
+    int[][] neighbors = new int[grid.Length][];
+    for (int y = 0; y < grid.Length; y++)
     {
-        Console.Write(parts[i]);
-        if (i < parts.Length - 1)
+        neighbors[y] = new int[grid[y].Length];
+        for (int x = 0; x < grid[y].Length; x++)
         {
-            if (ns > 1000000000)
-            {
-                Console.ForegroundColor = ConsoleColor.Red;
-                Console.Write($"{Math.Round(ns / 1000000000, 2)}s");
+            neighbors[y][x] = grid[y][x] == '@' ? CountNeighbors(grid, x, y) : 0;
+            if (grid[y][x] == '@' && neighbors[y][x] < 4)
+            {   
+                stack.Push((x, y));
             }
-            else if (ns > 1000000)
-            {
-                Console.ForegroundColor = ConsoleColor.Yellow;
-                Console.Write($"{Math.Ceiling(ns / 1000000)}ms");
-            }
-            else if (ns > 1000)
-            {
-                Console.ForegroundColor = ConsoleColor.Green;
-                Console.Write($"{Math.Ceiling(ns / 1000)}μs");
-            }
-            else
-            {
-                Console.ForegroundColor = ConsoleColor.Green;
-                Console.Write($"{ns}ns");
-            }
-            
-            Console.ResetColor();
         }
     }
+
+    while (stack.Count > 0)
+    {
+        var (x, y) = stack.Pop();
+        
+        // we can remove this paper roll
+        removed++;
+        neighbors[y][x] = 0;
+        
+        // decrease surrounding neighbor counts with 1,
+        foreach (var (nx, ny) in GetNeighbors(grid, x, y))
+        {
+            // if neighbor count is below threshold (4) AND not already on stack
+            // add it to the stack
+            if (neighbors[ny][nx] > 0)
+            {
+                neighbors[ny][nx]--;
+                if (neighbors[ny][nx] == 3)
+                {
+                    stack.Push((nx, ny));
+                }
+            }
+        }
+    }
+
+    return removed;
+}
+
+IEnumerable<(int, int)> GetNeighbors(char[][] grid, int x, int y)
+{
+    List<(int, int)> neighbors = new List<(int, int)>();
+    if (y >= 1)
+    {
+        if (x >= 1) neighbors.Add((x - 1, y - 1));
+        neighbors.Add((x, y - 1));
+        if (x < grid[y].Length - 1) neighbors.Add((x + 1, y - 1));
+    }
     
-    Console.WriteLine("");
+    if (x >= 1) neighbors.Add((x - 1, y));
+    if (x < grid[y].Length - 1) neighbors.Add((x + 1, y));
+    
+    if (y < grid.Length - 1)
+    {
+        if (x >= 1) neighbors.Add((x - 1, y + 1));
+        neighbors.Add((x, y + 1));
+        if (x < grid[y].Length - 1) neighbors.Add((x + 1, y + 1));
+    }
+    
+    return neighbors;
 }

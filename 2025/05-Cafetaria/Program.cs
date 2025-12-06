@@ -1,4 +1,4 @@
-﻿using System.Diagnostics;
+﻿using Shared;
 
 string[] input = File.ReadAllLines(Environment.GetEnvironmentVariable("INPUT") != null ? $"./{Environment.GetEnvironmentVariable("INPUT")}" : "./input.txt");
 
@@ -18,18 +18,22 @@ foreach (var line in input)
 }
 
 // Part 01
-var sw = Stopwatch.StartNew();
+var timer = new AocTimer();
 // perform calculation
 long one = PartOne(ranges, ingredients);
-sw.Stop();
-PrintElapsedTime($"How many of the available ingredient IDs are fresh? {one} ([ELAPSED])", sw.Elapsed);
+timer.Duration($"How many of the available ingredient IDs are fresh? {one}");
 
 // Part 02
-sw = Stopwatch.StartNew();
+timer = new AocTimer();
 // perform calculation
 long two = PartTwo(ranges);
-sw.Stop();
-PrintElapsedTime($"How many ingredient IDs are considered to be fresh according to the fresh ingredient ID ranges? {two} ([ELAPSED])", sw.Elapsed);
+timer.Duration($"How many ingredient IDs are considered to be fresh according to the fresh ingredient ID ranges? {two}");
+
+// Part 02 Optimized
+timer = new AocTimer();
+// perform calculation
+two = PartTwoOptimized(ranges);
+timer.Duration($"How many ingredient IDs are considered to be fresh according to the fresh ingredient ID ranges? {two}");
 
 long PartOne(List<(long, long)> ranges, List<long> ingredients)
 {
@@ -145,39 +149,48 @@ List<(long, long)> GetNonOverlapping(List<(long, long)> clean, long start, long 
     return nonOverlapping;
 }
 
-void PrintElapsedTime(string message, TimeSpan ts)
+long PartTwoOptimized(List<(long, long)> ranges)
 {
-    var ns = ts.TotalNanoseconds;
-    var parts = message.Split("[ELAPSED]");
-    for (var i = 0; i < parts.Length; i++)
+    /*
+     * The solutions on Reddit showed an alternative approach which is a lot more straightforward; what if we order the
+     * ranges based on their starting value. Then we can iterate over the ranges and compare the current position with
+     * the start position of the next range. If the start of the starting range is larger than our current position, then
+     * there is no overlap. We can count the number of items in the range and update the current position to the end of
+     * the range. Otherwise there _is_ an overlap, and we take the ingredient ids that fit between the current position
+     * and the new end.
+     *
+     * The funny thing is that this approach is not actually faster for me. I suspect due to the sorting algorithm.
+     */
+    
+    // Sort the ranges based on their start value
+    ranges.Sort((a, b) => a.Item1.CompareTo(b.Item1));
+
+    var nonOverlappingRanges = new List<(long, long)>();
+    
+    // Merge overlapping ranges
+    (long, long) previous = ranges.First();
+    
+    foreach (var current in ranges.Slice(1,  ranges.Count - 1))
     {
-        Console.Write(parts[i]);
-        if (i < parts.Length - 1)
+        if (current.Item1 <= previous.Item2)
         {
-            if (ns > 1000000000)
-            {
-                Console.ForegroundColor = ConsoleColor.Red;
-                Console.Write($"{Math.Round(ns / 1000000000, 2)}s");
-            }
-            else if (ns > 1000000)
-            {
-                Console.ForegroundColor = ConsoleColor.Yellow;
-                Console.Write($"{Math.Ceiling(ns / 1000000)}ms");
-            }
-            else if (ns > 1000)
-            {
-                Console.ForegroundColor = ConsoleColor.Green;
-                Console.Write($"{Math.Ceiling(ns / 1000)}μs");
-            }
-            else
-            {
-                Console.ForegroundColor = ConsoleColor.Green;
-                Console.Write($"{ns}ns");
-            }
-            
-            Console.ResetColor();
+            // merge
+            previous.Item2 = Math.Max(previous.Item2, current.Item2);
+        }
+        else
+        {
+            nonOverlappingRanges.Add(previous);
+            previous = current;
         }
     }
     
-    Console.WriteLine("");
+    nonOverlappingRanges.Add(previous);
+    
+    long ingredients = 0;
+    foreach (var (start, end) in nonOverlappingRanges)
+    {
+        ingredients += (end - start + 1);
+    }
+    
+    return ingredients;
 }
