@@ -16,6 +16,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "06-Trash-Compactor", "06-Tr
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Shared", "Shared\Shared.csproj", "{B2FB709B-AB95-4809-8E63-E91AAA427E2D}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "07-Laboratories", "07-Laboratories\07-Laboratories.csproj", "{40172EF0-554E-47BB-BB46-CE8016380235}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -54,5 +56,9 @@ Global
 		{B2FB709B-AB95-4809-8E63-E91AAA427E2D}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{B2FB709B-AB95-4809-8E63-E91AAA427E2D}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{B2FB709B-AB95-4809-8E63-E91AAA427E2D}.Release|Any CPU.Build.0 = Release|Any CPU
+		{40172EF0-554E-47BB-BB46-CE8016380235}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{40172EF0-554E-47BB-BB46-CE8016380235}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{40172EF0-554E-47BB-BB46-CE8016380235}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{40172EF0-554E-47BB-BB46-CE8016380235}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal
