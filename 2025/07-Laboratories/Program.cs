@@ -24,7 +24,7 @@ long PartOne(string[] grid)
     
     // We are going top to bottom, so why not keep track of the beams per line
     HashSet<int> beams = new HashSet<int>{ s };
-    for (int y = 1; y < grid.Length; y++)
+    for (int y = 2; y < grid.Length; y+=2) // since only every other line contains splitters, we can take steps of 2 rows
     {
         HashSet<int> next = new HashSet<int>();
         foreach (var beam in beams) 
@@ -42,10 +42,7 @@ long PartOne(string[] grid)
             }
         }
 
-        if (next.Count > 0) // In part one we cannot reduce the beams, so if no new beams are found we have had a row without splitters
-        {
-            beams = next;
-        }
+        beams = next;
     }
     
     return splits;
