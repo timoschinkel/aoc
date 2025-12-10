@@ -1,7 +1,9 @@
 ﻿using _10_Factory;
+using System.Reflection;
 using Shared;
 
-string[] input = File.ReadAllLines(Environment.GetEnvironmentVariable("INPUT") != null ? $"./{Environment.GetEnvironmentVariable("INPUT")}" : "./input.txt");
+string path = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location) ?? ".";
+string[] input = File.ReadAllLines(Environment.GetEnvironmentVariable("INPUT") != null ? $"{path}/{Environment.GetEnvironmentVariable("INPUT")}" : $"{path}/input.txt");
 
 // Parse input
 var machines = input.Select(Input.FromString).ToArray();

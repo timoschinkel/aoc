@@ -1,7 +1,9 @@
 ﻿using _08_Playground;
+using System.Reflection;
 using Shared;
 
-string[] input = File.ReadAllLines(Environment.GetEnvironmentVariable("INPUT") != null ? $"./{Environment.GetEnvironmentVariable("INPUT")}" : "./input.txt");
+string path = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location) ?? ".";
+string[] input = File.ReadAllLines(Environment.GetEnvironmentVariable("INPUT") != null ? $"{path}/{Environment.GetEnvironmentVariable("INPUT")}" : $"{path}/input.txt");
 int iterations = Environment.GetEnvironmentVariable("ITERATIONS") != null ? int.Parse(Environment.GetEnvironmentVariable("ITERATIONS")) : 1000;
 
 // Parse input

@@ -1,7 +1,9 @@
 ﻿using _09_Movie_Theater;
+using System.Reflection;
 using Shared;
 
-string[] input = File.ReadAllLines(Environment.GetEnvironmentVariable("INPUT") != null ? $"./{Environment.GetEnvironmentVariable("INPUT")}" : "./input.txt");
+string path = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location) ?? ".";
+string[] input = File.ReadAllLines(Environment.GetEnvironmentVariable("INPUT") != null ? $"{path}/{Environment.GetEnvironmentVariable("INPUT")}" : $"{path}/input.txt");
 
 // Parse input
 var tiles = input.Select(line => line.Split(',')).Select(item => new Point(long.Parse(item[0]), long.Parse(item[1]))).ToArray();

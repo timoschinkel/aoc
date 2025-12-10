@@ -1,6 +1,8 @@
-﻿using Shared;
+﻿using System.Reflection;
+using Shared;
 
-string[] input = File.ReadAllLines(Environment.GetEnvironmentVariable("INPUT") != null ? $"./{Environment.GetEnvironmentVariable("INPUT")}" : "./input.txt");
+string path = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location) ?? ".";
+string[] input = File.ReadAllLines(Environment.GetEnvironmentVariable("INPUT") != null ? $"{path}/{Environment.GetEnvironmentVariable("INPUT")}" : $"{path}/input.txt");
 
 // Parse input
 char[][] grid = input.Select(line => line.ToCharArray()).ToArray();

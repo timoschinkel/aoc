@@ -1,8 +1,10 @@
 ﻿using System.Text.RegularExpressions;
 using Shared;
 using Range = _02_Gift_Shop.Range;
+using System.Reflection;
 
-string[] input = File.ReadAllLines(Environment.GetEnvironmentVariable("INPUT") != null ? $"./{Environment.GetEnvironmentVariable("INPUT")}" : "./input.txt");
+string path = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location) ?? ".";
+string[] input = File.ReadAllLines(Environment.GetEnvironmentVariable("INPUT") != null ? $"{path}/{Environment.GetEnvironmentVariable("INPUT")}" : $"{path}/input.txt");
 
 // Parse input
 _02_Gift_Shop.Range[] ranges = input[0].Split(",").Select(_02_Gift_Shop.Range.FromInput).ToArray();
