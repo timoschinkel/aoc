@@ -26,6 +26,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "10-Factory", "10-Factory\10
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "11-Reactor", "11-Reactor\11-Reactor.csproj", "{F50FC9B9-2D9D-451E-8EC3-27E6FF548547}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "12-Christmas-Tree-Farm", "12-Christmas-Tree-Farm\12-Christmas-Tree-Farm.csproj", "{28E303AF-F760-4839-ADFD-B83D7DDB6B0E}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -84,5 +86,9 @@ Global
 		{F50FC9B9-2D9D-451E-8EC3-27E6FF548547}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{F50FC9B9-2D9D-451E-8EC3-27E6FF548547}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{F50FC9B9-2D9D-451E-8EC3-27E6FF548547}.Release|Any CPU.Build.0 = Release|Any CPU
+		{28E303AF-F760-4839-ADFD-B83D7DDB6B0E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{28E303AF-F760-4839-ADFD-B83D7DDB6B0E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{28E303AF-F760-4839-ADFD-B83D7DDB6B0E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{28E303AF-F760-4839-ADFD-B83D7DDB6B0E}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal
