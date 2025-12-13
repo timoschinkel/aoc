@@ -89,6 +89,9 @@ long PartTwo(Dictionary<string, List<string>> graph)
      *
      * When we have each of these subgraphs, then we can perform a BFS on each of them,
      * and then we multiply these answers.
+     *
+     * Edit: A standard BFS is slow (more than one minute on my machine). Looking on Google there are two ways to solve
+     * counting the number of paths in a directed acyclic graph; BFS with memoization and Dynamic Programming.
      */
 
     var first = "fft";
@@ -183,7 +186,7 @@ Dictionary<string, List<string>> BackTrackFrom(Dictionary<string, List<string>> 
     return graph;
 }
 
-long CountPaths(Dictionary<string, List<string>> graph, string start, string end)
+long CountPathsWithBFS(Dictionary<string, List<string>> graph, string start, string end)
 {
     var paths = new List<IEnumerable<string>>();
     
@@ -203,11 +206,6 @@ long CountPaths(Dictionary<string, List<string>> graph, string start, string end
                 throw new Exception("Cycle detected");
             }
 
-            // if (destination == "out")
-            // {
-            //     continue;
-            // }
-
             var newPath = path.Concat([destination]);
             if (destination == end)
             {
@@ -220,4 +218,33 @@ long CountPaths(Dictionary<string, List<string>> graph, string start, string end
     }
     
     return paths.Count;
+}
+
+long CountPathsWithMemoization(Dictionary<string, List<string>> graph, string start, string end)
+{
+    Dictionary<string, long> memo = new ();
+
+    long CountWithMemo(Dictionary<string, List<string>> graph, string node, string destination)
+    {
+        if (node == destination) return 1;
+        if (memo.ContainsKey(node)) return memo[node];
+
+        long paths = 0;
+        foreach (var child in graph[node])
+        {
+            paths += CountPathsWithMemoization(graph, child, destination);
+        }
+        memo[node] = paths;
+        return paths;
+    }
+    
+    return CountWithMemo(graph, start, end);
+}
+
+long CountPaths(Dictionary<string, List<string>> graph, string start, string end)
+{
+    // Optimization 01: Use BFS with memoization
+    return CountPathsWithMemoization(graph, start, end);
+    
+    // return CountPathsWithBFS(graph, start, end);
 }
